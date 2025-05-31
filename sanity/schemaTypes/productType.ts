@@ -83,9 +83,12 @@ export const productType = defineType({
       type: "string",
       options: {
         list: [
-          { title: "Gadget", value: "gadget" },
-          { title: "Appliances", value: "appliances" },
-          { title: "Refrigerators", value: "refrigerators" },
+          { title: "Fashion", value: "fashion" },
+          { title: "Electronics", value: "electronics" },
+          { title: "Home & Kitchen", value: "home-kitchen" },
+          { title: "Beauty & Personal Care", value: "beauty-personal-care" },
+          { title: "Sports & Outdoors", value: "sports-outdoors" },
+          { title: "Toys & Games", value: "toys-games" },
           { title: "Others", value: "others" },
         ],
       },
