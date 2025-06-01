@@ -10,11 +10,12 @@ interface ReelCardProps {
   reel: ProductReel;
   onProductOpen: (productId: string) => void;
   isPressed?: boolean;
+  globalMuted: boolean;
+  onToggleMute: (muted: boolean) => void;
 }
 
-export default function ReelCard({ reel, onProductOpen, isPressed = false }: ReelCardProps) {
+export default function ReelCard({ reel, onProductOpen, isPressed = false, globalMuted, onToggleMute }: ReelCardProps) {
   const [playing, setPlaying] = useState(false);
-  const [muted, setMuted] = useState(true);
   const [liked, setLiked] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const { ref, inView } = useInView({
@@ -39,6 +40,13 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false }: Ree
     }
   }, [inView]);
 
+  // Update video mute status when globalMuted changes
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = globalMuted;
+    }
+  }, [globalMuted]);
+
   // Play/pause based on user interaction
   const togglePlayback = () => {
     if (videoRef.current) {
@@ -53,10 +61,8 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false }: Ree
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (videoRef.current) {
-      videoRef.current.muted = !muted;
-      setMuted(!muted);
-    }
+    // Update the global mute state
+    onToggleMute(!globalMuted);
   };
 
   const toggleLike = (e: React.MouseEvent) => {
@@ -79,7 +85,7 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false }: Ree
         src={reel.video.url}
         className="w-full h-full object-cover"
         loop
-        muted={muted}
+        muted={globalMuted}
         playsInline
       />
 
@@ -97,7 +103,7 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false }: Ree
             onClick={toggleMute}
             className="p-2 rounded-full bg-black/20 backdrop-blur-sm pointer-events-auto"
           >
-            {muted ? (
+            {globalMuted ? (
               <VolumeXIcon size={20} className="text-white" />
             ) : (
               <Volume2Icon size={20} className="text-white" />

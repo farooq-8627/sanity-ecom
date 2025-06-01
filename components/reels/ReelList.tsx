@@ -34,6 +34,7 @@ export default function ReelList({ reels }: ReelListProps) {
   const [pressedReelId, setPressedReelId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
+  const [globalMuted, setGlobalMuted] = useState(true);
   const router = useRouter();
   const { addItem, addToFavorite, favoriteProduct, items } = useStore();
 
@@ -119,6 +120,10 @@ export default function ReelList({ reels }: ReelListProps) {
     }
   };
 
+  const handleToggleMute = (muted: boolean) => {
+    setGlobalMuted(muted);
+  };
+
   return (
     <div className="flex flex-col md:flex-row w-full h-[calc(100vh-4rem)]">
       {/* Mobile View - Full Screen Reels */}
@@ -141,6 +146,8 @@ export default function ReelList({ reels }: ReelListProps) {
                 reel={reel} 
                 onProductOpen={handleProductOpen}
                 isPressed={pressedReelId === reel._id}
+                globalMuted={globalMuted}
+                onToggleMute={handleToggleMute}
               />
             </div>
           ))}
