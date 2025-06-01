@@ -10,13 +10,32 @@ export interface ProductReel {
     name: string;
     description: string;
     images: {
-      url: string;
+      asset?: {
+        _ref: string;
+        _type: "reference";
+        _weak?: boolean;
+      };
+      hotspot?: {
+        x?: number;
+        y?: number;
+        height?: number;
+        width?: number;
+      };
+      crop?: {
+        top?: number;
+        bottom?: number;
+        left?: number;
+        right?: number;
+      };
+      _type: "image";
+      _key: string;
     }[];
     stock: number;
     price: number;
     slug: {
       current: string;
     };
+    discount?: number;
   };
   likes: number;
   views: number;

@@ -8,14 +8,14 @@ import { Button } from "./ui/button";
 import Link from "next/link";
 import { Product } from "@/sanity.types";
 import toast from "react-hot-toast";
-import Image from "next/image";
-import { urlFor } from "@/sanity/lib/image";
 import PriceFormatter from "./PriceFormatter";
 import AddToCartButton from "./AddToCartButton";
+import SanityImage from "./SanityImage";
 
 const WishListProducts = () => {
   const [visibleProducts, setVisibleProducts] = useState(7);
   const { favoriteProduct, removeFromFavorite, resetFavorite } = useStore();
+  
   const loadMore = () => {
     setVisibleProducts((prev) => Math.min(prev + 5, favoriteProduct.length));
   };
@@ -39,9 +39,7 @@ const WishListProducts = () => {
               <thead className="border-b">
                 <tr className="bg-black/5">
                   <th className="p-2 text-left">Image</th>
-                  <th className="p-2 text-left hidden md:table-cell">
-                    Category
-                  </th>
+                  <th className="p-2 text-left hidden md:table-cell">Category</th>
                   <th className="p-2 text-left hidden md:table-cell">Type</th>
                   <th className="p-2 text-left hidden md:table-cell">Status</th>
                   <th className="p-2 text-left">Price</th>
@@ -62,13 +60,13 @@ const WishListProducts = () => {
                           size={18}
                           className="hover:text-red-600 hover:cursor-pointer hoverEffect"
                         />
-                        {product?.images && (
+                        {product?.images && product.images[0] && (
                           <Link
                             href={`/product/${product?.slug?.current}`}
                             className="border rounded-md group hidden md:inline-flex"
                           >
-                            <Image
-                              src={urlFor(product?.images[0]).url()}
+                            <SanityImage
+                              image={product.images[0]}
                               alt={"product image"}
                               width={80}
                               height={80}

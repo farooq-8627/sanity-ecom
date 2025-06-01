@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { ProductReel } from "@/types/ProductReel";
 import { useInView } from "react-intersection-observer";
 import { PlayIcon, PauseIcon, HeartIcon, ShareIcon, MessageCircleIcon, Volume2Icon, VolumeXIcon } from "lucide-react";
-import Image from "next/image";
+import SanityImage from "../SanityImage";
 
 interface ReelCardProps {
   reel: ProductReel;
@@ -17,52 +17,45 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false }: Ree
   const [muted, setMuted] = useState(true);
   const [liked, setLiked] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
-  
   const { ref, inView } = useInView({
     threshold: 0.7,
-    onChange: (inView) => {
-      if (inView) {
-        videoRef.current?.play();
-        setPlaying(true);
-      } else {
-        videoRef.current?.pause();
-        setPlaying(false);
-        setMuted(true); // Reset muted state when reel is not in view
-      }
-    }
   });
 
-  const togglePlay = () => {
-    if (playing) {
-      videoRef.current?.pause();
-      setPlaying(false);
-    } else {
-      videoRef.current?.play();
-      setPlaying(true);
+  // Play/pause based on visibility
+  const togglePlayback = () => {
+    if (videoRef.current) {
+      if (playing) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play();
+      }
+      setPlaying(!playing);
     }
   };
 
   const toggleMute = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent video play/pause
+    e.stopPropagation();
     if (videoRef.current) {
-      videoRef.current.muted = !videoRef.current.muted;
+      videoRef.current.muted = !muted;
       setMuted(!muted);
     }
   };
 
-  const toggleLike = () => {
+  const toggleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setLiked(!liked);
-    // Here you would typically make an API call to update likes in Sanity
   };
 
   return (
     <div 
-      ref={ref} 
-      className={`relative w-full max-w-[400px] aspect-[9/16] bg-black rounded-lg overflow-hidden transition-transform duration-300 ${
-        isPressed ? 'scale-95' : 'scale-100'
+      ref={ref}
+      className={`relative w-full max-w-[400px] aspect-[9/16] rounded-xl overflow-hidden shadow-lg transition-transform ${
+        isPressed ? 'scale-[0.98]' : 'scale-100'
       }`}
+      onClick={togglePlayback}
     >
-      {/* Video */}
+      <div className="absolute inset-0 bg-black/20 z-10" />
+      
       <video
         ref={videoRef}
         src={reel.video.url}
@@ -70,15 +63,16 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false }: Ree
         loop
         muted={muted}
         playsInline
+        onClick={togglePlayback}
       />
 
       {/* Overlay Controls */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/50">
+      <div className="absolute inset-0 z-20 p-4 flex flex-col justify-between pointer-events-none">
         {/* Top Controls */}
-        <div className="absolute top-4 right-4 z-10">
-          <button
+        <div className="flex justify-end">
+          <button 
             onClick={toggleMute}
-            className="p-2 rounded-full bg-black/20 backdrop-blur-sm"
+            className="p-2 rounded-full bg-black/20 backdrop-blur-sm pointer-events-auto"
           >
             {muted ? (
               <VolumeXIcon size={24} className="text-white" />
@@ -89,22 +83,23 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false }: Ree
         </div>
 
         {/* Center Play/Pause Button */}
-        <button
-          onClick={togglePlay}
-          className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white/80 hover:text-white"
-        >
-          {playing ? <PauseIcon size={48} /> : <PlayIcon size={48} />}
-        </button>
+        <div className="absolute inset-0 flex items-center justify-center">
+          {!playing && (
+            <button className="p-4 rounded-full bg-black/20 backdrop-blur-sm transform transition-transform hover:scale-110">
+              <PlayIcon size={32} className="text-white" />
+            </button>
+          )}
+        </div>
 
         {/* Product Info */}
         <div 
-          className="absolute bottom-4 left-4 right-12 cursor-pointer"
+          className="absolute bottom-4 left-4 right-12 cursor-pointer pointer-events-auto"
           onClick={() => onProductOpen(reel.product._id)}
         >
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-lg overflow-hidden">
-              <Image
-                src={reel.product.images?.[0]?.url || ''}
+              <SanityImage
+                image={reel.product.images?.[0]}
                 alt={reel.product.name || 'Product image'}
                 width={48}
                 height={48}
@@ -119,7 +114,7 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false }: Ree
         </div>
 
         {/* Interaction Buttons */}
-        <div className="absolute right-4 bottom-4 flex flex-col gap-4">
+        <div className="absolute right-4 bottom-4 flex flex-col gap-4 pointer-events-auto">
           <button 
             onClick={toggleLike}
             className="p-2 rounded-full bg-black/20 backdrop-blur-sm"

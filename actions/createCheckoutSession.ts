@@ -19,6 +19,18 @@ export interface GroupedCartItems {
   quantity: number;
 }
 
+function getImageUrl(image: any): string {
+  if (!image) return '';
+  if (typeof image === 'string') return image;
+  if (image.url) return image.url;
+  try {
+    return urlFor(image).url();
+  } catch (error) {
+    console.error('Error generating image URL:', error);
+    return '';
+  }
+}
+
 export async function createCheckoutSession(
   items: GroupedCartItems[],
   metadata: Metadata
@@ -59,7 +71,7 @@ export async function createCheckoutSession(
             metadata: { id: item?.product?._id },
             images:
               item?.product?.images && item?.product?.images?.length > 0
-                ? [urlFor(item?.product?.images[0]).url()]
+                ? [getImageUrl(item?.product?.images[0])]
                 : undefined,
           },
         },

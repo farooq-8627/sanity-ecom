@@ -32,6 +32,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import SanityImage from "@/components/SanityImage";
+import { v4 as uuidv4 } from 'uuid';
 
 const CartPage = () => {
   const {
@@ -83,7 +85,7 @@ const CartPage = () => {
     setLoading(true);
     try {
       const metadata: Metadata = {
-        orderNumber: crypto.randomUUID(),
+        orderNumber: uuidv4(),
         customerName: user?.fullName ?? "Unknown",
         customerEmail: user?.emailAddresses[0]?.emailAddress ?? "Unknown",
         clerkUserId: user?.id,
@@ -126,9 +128,9 @@ const CartPage = () => {
                                 className="border p-0.5 md:p-1 mr-2 rounded-md
                                  overflow-hidden group"
                               >
-                                <Image
-                                  src={urlFor(product?.images[0]).url()}
-                                  alt="productImage"
+                                <SanityImage
+                                  image={product?.images[0]}
+                                  alt="Product image"
                                   width={500}
                                   height={500}
                                   loading="lazy"

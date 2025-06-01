@@ -9,19 +9,33 @@ import useStore from "@/store";
 import toast from "react-hot-toast";
 import ProductImageCarousel from "../ProductImageCarousel";
 import ReelComments from "./ReelComments";
+import { urlFor } from "@/sanity/lib/image";
+import QuantityButtons from "../QuantityButtons";
+import PriceView from "../PriceView";
+import { client } from "@/sanity/lib/client";
 
 interface ReelListProps {
   reels: ProductReel[];
 }
 
+interface ProductImageWithUrl {
+  url: string;
+}
+
+function convertSanityImagesToUrls(images: any[]): ProductImageWithUrl[] {
+  return images.map(image => ({
+    url: typeof image === 'string' || image.url ? (image.url || image) : urlFor(image).url()
+  }));
+}
+
 export default function ReelList({ reels }: ReelListProps) {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [pressedReelId, setPressedReelId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
-  const { addItem, addToFavorite, favoriteProduct } = useStore();
+  const { addItem, addToFavorite, favoriteProduct, items } = useStore();
 
-  // Check if we're on mobile
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -33,22 +47,49 @@ export default function ReelList({ reels }: ReelListProps) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+    const fetchProduct = async () => {
+      if (selectedProductId) {
+        const reel = reels.find(r => r.product._id === selectedProductId);
+        if (reel?.product?.slug?.current) {
+          const query = `*[_type == "product" && slug.current == $slug][0]{
+            ...,
+            _id,
+            name,
+            description,
+            price,
+            discount,
+            stock,
+            variant,
+            status,
+            images,
+            slug,
+            "categories": categories[]->title
+          }`;
+          const product = await client.fetch(query, { 
+            slug: reel.product.slug.current 
+          });
+          console.log('Fetched product:', product); // Debug log
+          setSelectedProduct(product);
+        }
+      } else {
+        setSelectedProduct(null);
+      }
+    };
+    
+    fetchProduct();
+  }, [selectedProductId, reels]);
+
   const handleProductOpen = (productId: string) => {
     if (isMobile) {
-      // On mobile, directly navigate to product page
       const selectedReel = reels.find(reel => reel.product._id === productId);
       if (selectedReel?.product?.slug?.current) {
         router.push(`/product/${selectedReel.product.slug.current}`);
       }
     } else {
-      // On desktop, show product panel
       setSelectedProductId(productId);
     }
   };
-
-  const selectedProduct = selectedProductId 
-    ? reels.find(reel => reel.product._id === selectedProductId)?.product 
-    : null;
 
   const handleAddToCart = (product: any) => {
     if (product.stock > 0) {
@@ -65,6 +106,10 @@ export default function ReelList({ reels }: ReelListProps) {
       const isInWishlist = favoriteProduct.some(item => item._id === product._id);
       toast.success(isInWishlist ? "Product removed successfully!" : "Product added successfully!");
     }
+  };
+
+  const isInCart = (productId: string): boolean => {
+    return items.some(item => item.product._id === productId);
   };
 
   return (
@@ -100,7 +145,7 @@ export default function ReelList({ reels }: ReelListProps) {
               {/* Left: Product Images */}
               <div className="flex-shrink-0">
                 <ProductImageCarousel 
-                  images={selectedProduct.images || []}
+                  images={convertSanityImagesToUrls(selectedProduct.images || [])}
                   title={selectedProduct.name || ''}
                 />
               </div>
@@ -126,15 +171,46 @@ export default function ReelList({ reels }: ReelListProps) {
                   </button>
                 </div>
 
+                {/* Price Display */}
+                <div className="mb-4">
+                  <PriceView 
+                    price={selectedProduct.price} 
+                    discount={selectedProduct.discount}
+                    className="text-2xl font-bold"
+                  />
+                </div>
+
+                {/* Quantity Selector */}
+                <div className="flex items-center gap-4 mb-4">
+                  <span className="text-sm text-gray-600">Quantity:</span>
+                  <QuantityButtons product={selectedProduct} />
+                </div>
+
+                {/* Stock Status */}
+                <div className="mb-6">
+                  <span className={`px-2 py-1 rounded text-sm ${selectedProduct.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {selectedProduct.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                  </span>
+                </div>
+
                 {/* Action Buttons */}
                 <div className="mt-auto flex items-center gap-2">
-                  <button
-                    onClick={() => handleAddToCart(selectedProduct)}
-                    className="flex-1 py-2 px-3 bg-black text-white text-sm rounded-lg hover:bg-black/90 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    disabled={selectedProduct.stock === 0}
-                  >
-                    {selectedProduct.stock === 0 ? "Out of Stock" : "Add to Cart"}
-                  </button>
+                  {isInCart(selectedProduct._id) ? (
+                    <button
+                      onClick={() => router.push('/cart')}
+                      className="flex-1 py-2 px-3 bg-shop_light_green text-white text-sm rounded-lg hover:bg-shop_dark_green transition-colors"
+                    >
+                      View Cart
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleAddToCart(selectedProduct)}
+                      className="flex-1 py-2 px-3 bg-black text-white text-sm rounded-lg hover:bg-black/90 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      disabled={selectedProduct.stock === 0}
+                    >
+                      {selectedProduct.stock === 0 ? "Out of Stock" : "Add to Cart"}
+                    </button>
+                  )}
                   <button
                     onClick={() => selectedProduct.slug.current && router.push(`/product/${selectedProduct.slug.current}`)}
                     className="py-2 px-3 text-sm text-gray-600 hover:text-gray-900"
