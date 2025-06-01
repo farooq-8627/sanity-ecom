@@ -6,7 +6,7 @@ const RootLayout = ({ children }: { children: React.ReactNode }) => {
       <body className="font-poppins antialiased">
         {children}
         <Toaster
-          position="bottom-right"
+          position="top-right"
           toastOptions={{
             style: {
               background: "#000000",

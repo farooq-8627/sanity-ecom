@@ -14,14 +14,13 @@ interface Props {
 }
 
 const AddToCartButton = ({ product, className }: Props) => {
-  const { addItem, getItemCount, syncCartWithServer } = useStore();
+  const { addItem, getItemCount } = useStore();
   const itemCount = getItemCount(product?._id);
   const isOutOfStock = product?.stock === 0;
 
   const handleAddToCart = () => {
     if ((product?.stock as number) > itemCount) {
       addItem(product);
-      syncCartWithServer();
       toast.success(
         `${product?.name?.substring(0, 12)}... added successfully!`
       );

@@ -39,7 +39,7 @@ const useStore = create<StoreState>()(
       items: [],
       favoriteProduct: [],
       likedReels: [],
-      addItem: (product) =>
+      addItem: (product) => {
         set((state) => {
           const existingItem = state.items.find(
             (item) => item.product._id === product._id
@@ -55,7 +55,13 @@ const useStore = create<StoreState>()(
           } else {
             return { items: [...state.items, { product, quantity: 1 }] };
           }
-        }),
+        });
+        
+        // Sync with server after updating local state
+        setTimeout(() => {
+          get().syncCartWithServer();
+        }, 0);
+      },
       removeItem: (productId) => {
         set((state) => ({
           items: state.items.reduce((acc, item) => {
@@ -116,6 +122,8 @@ const useStore = create<StoreState>()(
       getGroupedItems: () => get().items,
       syncCartWithServer: async () => {
         try {
+          console.log("Syncing cart with server...", get().items.length, "items");
+          
           const response = await fetch('/api/user-cart', {
             method: 'POST',
             headers: {
@@ -125,27 +133,51 @@ const useStore = create<StoreState>()(
           });
           
           if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
             console.error("Error syncing cart with server:", errorData);
+            throw new Error(errorData.error || "Failed to sync cart");
           }
+          
+          const data = await response.json();
+          console.log("Cart sync response:", data);
+          return data;
         } catch (error) {
           console.error("Error syncing cart with server:", error);
+          throw error;
         }
       },
       loadCartFromServer: async () => {
         try {
+          console.log("Loading cart data from server...");
           const response = await fetch('/api/user-cart');
           
-          if (response.ok) {
-            const data = await response.json();
-            if (data.items && Array.isArray(data.items)) {
-              set({ items: data.items });
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+            console.error("Error loading cart from server:", errorData);
+            throw new Error(errorData.error || "Failed to load cart data");
+          }
+          
+          const data = await response.json();
+          console.log("Cart data received:", data);
+          
+          if (data.items && Array.isArray(data.items)) {
+            // Filter out any items with missing product data
+            const validItems = data.items.filter((item: CartItem) => item.product && item.product._id);
+            
+            if (validItems.length !== data.items.length) {
+              console.warn(`Filtered out ${data.items.length - validItems.length} invalid cart items`);
             }
+            
+            set({ items: validItems });
+            console.log("Cart updated in store with", validItems.length, "items");
+            return validItems;
           } else {
-            console.error("Error loading cart from server:", await response.json());
+            console.error("Invalid cart data format:", data);
+            throw new Error("Invalid cart data format");
           }
         } catch (error) {
           console.error("Error loading cart from server:", error);
+          throw error;
         }
       },
       addToFavorite: async (product: Product) => {

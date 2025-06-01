@@ -16,6 +16,8 @@ export async function GET(req: Request) {
       );
     }
     
+    console.log("Fetching cart for user:", userId);
+    
     // Check if user has a cart in Sanity
     const userCart = await client.fetch(
       `*[_type == "userCart" && userId == $userId][0]{
@@ -33,16 +35,24 @@ export async function GET(req: Request) {
     
     // If no cart exists, return empty array
     if (!userCart) {
+      console.log("No cart found for user:", userId);
       return NextResponse.json({ items: [] });
     }
     
+    console.log("Found cart with", userCart.items?.length || 0, "items for user", userId);
+    
     // Get product details for each item in cart
     const cartWithProducts = await Promise.all(
-      userCart.items.map(async (item: any) => {
+      (userCart.items || []).map(async (item: any) => {
         const product = await client.fetch(
           `*[_type == "product" && _id == $productId][0]`,
           { productId: item.productId }
         );
+        
+        if (!product) {
+          console.log(`Product not found for ID: ${item.productId}`);
+          return null;
+        }
         
         return {
           product,
@@ -51,7 +61,12 @@ export async function GET(req: Request) {
       })
     );
     
-    return NextResponse.json({ items: cartWithProducts });
+    // Filter out any null products (in case a product was deleted)
+    const validCartItems = cartWithProducts.filter(item => item !== null);
+    
+    console.log("Returning", validCartItems.length, "valid products for cart of user", userId);
+    
+    return NextResponse.json({ items: validCartItems });
   } catch (error) {
     console.error("Error fetching user cart:", error);
     return NextResponse.json(
@@ -75,14 +90,20 @@ export async function POST(req: Request) {
     }
     
     // Get cart items from request
-    const { items } = await req.json();
+    const body = await req.json();
+    console.log(`Received cart update request for user ${userId}:`, body);
+    
+    const { items } = body;
     
     if (!Array.isArray(items)) {
+      console.error("Invalid cart data format:", body);
       return NextResponse.json(
         { error: "Invalid cart data. Items must be an array." },
         { status: 400 }
       );
     }
+    
+    console.log(`Processing ${items.length} cart items for user ${userId}`);
     
     // Check if token exists
     if (!process.env.SANITY_API_TOKEN) {
@@ -98,12 +119,21 @@ export async function POST(req: Request) {
     
     try {
       // Format cart items for Sanity with _key property
-      const sanityCartItems = items.map((item: any) => ({
-        _key: `${item.product._id}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-        productId: item.product._id,
-        quantity: item.quantity,
-        addedAt: new Date().toISOString()
-      }));
+      const sanityCartItems = items.map((item: any, index: number) => {
+        if (!item || !item.product || !item.product._id) {
+          console.error("Invalid item in cart items:", item);
+          throw new Error("Invalid item data in cart items");
+        }
+        
+        return {
+          _key: `${item.product._id}_${Date.now()}_${index}`,
+          productId: item.product._id,
+          quantity: item.quantity,
+          addedAt: new Date().toISOString()
+        };
+      });
+      
+      console.log(`Formatted ${sanityCartItems.length} cart items for user ${userId}`);
       
       // Check if user already has a cart
       const existingCart = await client.fetch(
@@ -112,31 +142,49 @@ export async function POST(req: Request) {
       );
       
       if (existingCart) {
+        console.log(`Updating existing cart for user ${userId}:`, existingCart._id);
+        
         // Update existing cart
-        await backendClient
+        const result = await backendClient
           .patch(existingCart._id)
           .set({ 
             items: sanityCartItems,
             updatedAt: new Date().toISOString()
           })
           .commit();
+          
+        console.log(`Cart updated successfully for user ${userId}:`, result._id);
+        
+        return NextResponse.json({ 
+          success: true,
+          itemCount: sanityCartItems.length,
+          userId: userId
+        });
       } else {
+        console.log(`Creating new cart for user ${userId}`);
+        
         // Create new cart
-        await backendClient.create({
+        const result = await backendClient.create({
           _type: 'userCart',
           userId,
           items: sanityCartItems,
           updatedAt: new Date().toISOString()
         });
+        
+        console.log(`New cart created for user ${userId}:`, result._id);
+        
+        return NextResponse.json({ 
+          success: true,
+          itemCount: sanityCartItems.length,
+          userId: userId
+        });
       }
-      
-      return NextResponse.json({ success: true });
     } catch (error) {
-      console.error("Sanity write error:", error);
+      console.error(`Sanity write error for user ${userId}:`, error);
       return NextResponse.json(
         { 
           error: "Failed to update cart. Your token may be read-only.",
-          details: "Sanity write operation failed. Please ensure your token has write permissions."
+          details: error instanceof Error ? error.message : String(error)
         },
         { status: 500 }
       );

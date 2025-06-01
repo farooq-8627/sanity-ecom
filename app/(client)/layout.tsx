@@ -24,7 +24,7 @@ export default function RootLayout({
       <div className="flex flex-col min-h-screen">
         <StoreInitializer />
         {/* <UserWishlistInitializer /> */}
-        <Toaster position="top-center" />
+        {/* <Toaster position="top-center" /> */}
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
