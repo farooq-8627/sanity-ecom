@@ -92,13 +92,7 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
       {/* Overlay Controls */}
       <div className="absolute inset-0 z-20 p-4 flex flex-col justify-between pointer-events-none">
         {/* Top Controls - Header */}
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2 text-white">
-            <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-300">
-              {/* User avatar could go here */}
-            </div>
-            <span className="text-sm font-medium drop-shadow-sm">Shop Reel</span>
-          </div>
+        <div className="flex justify-end items-center">
           <button 
             onClick={toggleMute}
             className="p-2 rounded-full bg-black/20 backdrop-blur-sm pointer-events-auto"
@@ -122,14 +116,14 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
 
         {/* Product Info - Footer */}
         <div 
-          className="absolute bottom-4 left-4 right-12 cursor-pointer pointer-events-auto"
+          className="absolute bottom-4 left-0 right-0 px-4 cursor-pointer pointer-events-auto"
           onClick={(e) => {
             e.stopPropagation();
             onProductOpen(reel.product._id);
           }}
         >
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-lg overflow-hidden bg-white">
+          <div className="flex items-center gap-2">
+            <div className="w-12 h-12 rounded-lg overflow-hidden bg-white flex-shrink-0">
               {reel.product.images?.[0] && (
                 <SanityImage
                   image={reel.product.images[0]}
@@ -141,14 +135,16 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
               )}
             </div>
             <div className="flex-1">
-              <h3 className="text-white font-medium truncate drop-shadow-sm">{reel.product.name}</h3>
-              <p className="text-white/80 text-sm truncate drop-shadow-sm">{reel.product.description}</p>
+              <h3 className="text-white text-sm font-medium mb-0.5 drop-shadow-sm line-clamp-1">{reel.product.name}</h3>
+              <button className="bg-white/80 backdrop-blur-sm text-black px-4 py-1 rounded-full text-xs font-medium">
+                View Product
+              </button>
             </div>
           </div>
         </div>
 
         {/* Interaction Buttons */}
-        <div className="absolute right-4 bottom-16 flex flex-col gap-4 pointer-events-auto">
+        <div className="absolute right-4 bottom-24 flex flex-col gap-4 pointer-events-auto">
           <button 
             onClick={toggleLike}
             className="p-2 rounded-full bg-black/20 backdrop-blur-sm"
