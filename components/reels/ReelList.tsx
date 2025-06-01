@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ProductReel } from "@/types/ProductReel";
 import ReelCard from "./ReelCard";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import useStore from "@/store";
 import toast from "react-hot-toast";
@@ -16,6 +16,7 @@ import { client } from "@/sanity/lib/client";
 
 interface ReelListProps {
   reels: ProductReel[];
+  initialSlug?: string;
 }
 
 interface ProductImageWithUrl {
@@ -28,15 +29,22 @@ function convertSanityImagesToUrls(images: any[]): ProductImageWithUrl[] {
   }));
 }
 
-export default function ReelList({ reels }: ReelListProps) {
+export default function ReelList({ reels, initialSlug }: ReelListProps) {
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [pressedReelId, setPressedReelId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [globalMuted, setGlobalMuted] = useState(true);
+  const [currentReelIndex, setCurrentReelIndex] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
   const { addItem, addToFavorite, favoriteProduct, items } = useStore();
+  
+  // Track which reel is currently visible
+  const [visibleReelIds, setVisibleReelIds] = useState<Set<string>>(new Set());
+  const lastScrollPosition = useRef(0);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -46,8 +54,24 @@ export default function ReelList({ reels }: ReelListProps) {
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
-    return () => window.removeEventListener('resize', checkMobile);
+    // Prevent body scrolling when on reels page
+    document.body.style.overflow = 'hidden';
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      document.body.style.overflow = '';
+    };
   }, []);
+  
+  // Set initial product ID based on initialSlug if provided
+  useEffect(() => {
+    if (initialSlug && reels.length > 0) {
+      const initialReel = reels.find(reel => reel.product.slug.current === initialSlug);
+      if (initialReel) {
+        setSelectedProductId(initialReel.product._id);
+      }
+    }
+  }, [initialSlug, reels]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -114,9 +138,79 @@ export default function ReelList({ reels }: ReelListProps) {
     return items.some(item => item.product._id === productId);
   };
 
+  // Prevent default touch behavior to avoid page scrolling
+  useEffect(() => {
+    const preventDefault = (e: TouchEvent) => {
+      e.preventDefault();
+    };
+
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener('touchmove', (e) => {
+        e.stopPropagation();
+      }, { passive: false });
+    }
+
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('touchmove', (e) => {
+          e.stopPropagation();
+        });
+      }
+    };
+  }, []);
+
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (!hasScrolled && e.currentTarget.scrollTop > 10) {
       setHasScrolled(true);
+    }
+    
+    // Update URL based on which reel is most visible
+    const scrollContainer = e.currentTarget;
+    const scrollTop = scrollContainer.scrollTop;
+    const scrollDirection = scrollTop > lastScrollPosition.current ? 'down' : 'up';
+    lastScrollPosition.current = scrollTop;
+    
+    // Find which reel is most visible
+    const containerHeight = scrollContainer.clientHeight;
+    let maxVisibleRatio = 0;
+    let mostVisibleReelIndex = 0;
+    
+    const reelElements = Array.from(scrollContainer.children);
+    
+    reelElements.forEach((reelElement, index) => {
+      if (reelElement instanceof HTMLElement) {
+        const rect = reelElement.getBoundingClientRect();
+        const reelTop = rect.top;
+        const reelBottom = rect.bottom;
+        const reelHeight = rect.height;
+        
+        // Calculate how much of the reel is visible
+        const visibleTop = Math.max(0, reelTop);
+        const visibleBottom = Math.min(containerHeight, reelBottom);
+        const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+        const visibleRatio = visibleHeight / reelHeight;
+        
+        if (visibleRatio > maxVisibleRatio) {
+          maxVisibleRatio = visibleRatio;
+          mostVisibleReelIndex = index;
+        }
+      }
+    });
+    
+    // Only update if the most visible reel has changed
+    if (mostVisibleReelIndex !== currentReelIndex && maxVisibleRatio > 0.5) {
+      setCurrentReelIndex(mostVisibleReelIndex);
+      const currentReel = reels[mostVisibleReelIndex];
+      
+      if (currentReel?.product?.slug?.current) {
+        // Update URL without full page reload
+        const newUrl = `/reel/${currentReel.product.slug.current}`;
+        if (pathname !== newUrl) {
+          window.history.replaceState({}, '', newUrl);
+          setSelectedProductId(currentReel.product._id);
+        }
+      }
     }
   };
 
@@ -125,30 +219,33 @@ export default function ReelList({ reels }: ReelListProps) {
   };
 
   return (
-    <div className="flex flex-col md:flex-row w-full h-[calc(100vh-4rem)]">
+    <div className="flex flex-col md:flex-row w-full h-full">
       {/* Mobile View - Full Screen Reels */}
-      <div className={`w-full ${!isMobile && 'md:w-[60%]'} h-full`}>
+      <div className={`w-full ${!isMobile && 'md:w-[60%]'} h-full flex items-center justify-center -my-16`}>
         <div 
-          className="h-full snap-y snap-mandatory overflow-y-auto scrollbar-hide"
+          ref={scrollContainerRef}
+          className="h-full w-full snap-y snap-mandatory overflow-y-auto scrollbar-hide overscroll-y-contain"
           onScroll={handleScroll}
         >
           {reels.map((reel) => (
             <div 
               key={reel._id} 
-              className="h-full snap-start flex items-center justify-center py-1"
+              className="h-full w-full snap-start flex items-center justify-center"
               onMouseDown={() => setPressedReelId(reel._id)}
               onMouseUp={() => setPressedReelId(null)}
               onMouseLeave={() => setPressedReelId(null)}
               onTouchStart={() => setPressedReelId(reel._id)}
               onTouchEnd={() => setPressedReelId(null)}
             >
-              <ReelCard 
-                reel={reel} 
-                onProductOpen={handleProductOpen}
-                isPressed={pressedReelId === reel._id}
-                globalMuted={globalMuted}
-                onToggleMute={handleToggleMute}
-              />
+              <div className="flex items-center justify-center h-full max-w-md mx-auto px-4">
+                <ReelCard 
+                  reel={reel} 
+                  onProductOpen={handleProductOpen}
+                  isPressed={pressedReelId === reel._id}
+                  globalMuted={globalMuted}
+                  onToggleMute={handleToggleMute}
+                />
+              </div>
             </div>
           ))}
           

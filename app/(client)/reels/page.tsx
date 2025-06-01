@@ -1,41 +1,17 @@
 import { groq } from "next-sanity";
 import { client } from "@/sanity/lib/client";
-import ReelList from "@/components/reels/ReelList";
+import { redirect } from "next/navigation";
 import { Metadata } from "next";
 
 // Query to get all reels with their associated products
 const reelsQuery = groq`*[_type == "productReel"] {
   _id,
-  video {
-    "url": asset->url
-  },
   product-> {
-    _id,
-    name,
-    description,
-    images[] {
-      "url": asset->url
-    },
-    stock,
-    price,
     slug {
       current
     }
-  },
-  likes,
-  views,
-  comments[] {
-    _id,
-    user-> {
-      name,
-      "image": avatar.asset->url
-    },
-    comment,
-    _createdAt
-  },
-  shareCount,
-  tags
-} | order(_createdAt desc)`;
+  }
+} | order(_createdAt desc)[0]`;
 
 export const metadata: Metadata = {
   title: "Shop Reels | Discover Products in Action",
@@ -45,11 +21,19 @@ export const metadata: Metadata = {
 export const revalidate = 30; // Revalidate every 30 seconds
 
 export default async function ReelsPage() {
-  const reels = await client.fetch(reelsQuery);
-
+  const firstReel = await client.fetch(reelsQuery);
+  
+  if (firstReel && firstReel.product?.slug?.current) {
+    redirect(`/reel/${firstReel.product.slug.current}`);
+  }
+  
+  // Fallback in case there are no reels
   return (
-    <main className="h-full">
-      <ReelList reels={reels} />
+    <main className="h-full flex items-center justify-center">
+      <div className="text-center p-8">
+        <h2 className="text-2xl font-bold mb-2">No Reels Available</h2>
+        <p className="text-gray-600">Check back later for product reels.</p>
+      </div>
     </main>
   );
 }

@@ -73,7 +73,7 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
   return (
     <div 
       ref={ref}
-      className={`relative w-full max-w-[400px] aspect-[9/16] rounded-xl overflow-hidden shadow-lg transition-transform ${
+      className={`relative w-full max-w-[420px] aspect-[9/16] rounded-xl overflow-hidden shadow-lg transition-transform ${
         isPressed ? 'scale-[0.98]' : 'scale-100'
       }`}
       onClick={togglePlayback}
@@ -123,7 +123,7 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
           }}
         >
           <div className="flex items-center gap-2">
-            <div className="w-12 h-12 rounded-lg overflow-hidden bg-white flex-shrink-0">
+            <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex-shrink-0">
               {reel.product.images?.[0] && (
                 <SanityImage
                   image={reel.product.images[0]}
@@ -136,9 +136,9 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
             </div>
             <div className="flex-1">
               <h3 className="text-white text-sm font-medium mb-0.5 drop-shadow-sm line-clamp-1">{reel.product.name}</h3>
-              <button className="bg-white/80 backdrop-blur-sm text-black px-4 py-1 rounded-full text-xs font-medium">
+              {/* <button className="bg-white/80 backdrop-blur-sm text-black px-4 py-1 rounded-full text-xs font-medium">
                 View Product
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
