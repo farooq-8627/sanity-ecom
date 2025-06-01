@@ -1,6 +1,7 @@
 import { groq } from "next-sanity";
 import { client } from "@/sanity/lib/client";
 import ReelList from "@/components/reels/ReelList";
+import { Metadata } from "next";
 
 // Query to get all reels with their associated products
 const reelsQuery = groq`*[_type == "productReel"] {
@@ -35,6 +36,11 @@ const reelsQuery = groq`*[_type == "productReel"] {
   shareCount,
   tags
 } | order(_createdAt desc)`;
+
+export const metadata: Metadata = {
+  title: "Shop Reels | Discover Products in Action",
+  description: "Watch short videos of our products in action and shop directly from the reels."
+};
 
 export const revalidate = 30; // Revalidate every 30 seconds
 
