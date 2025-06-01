@@ -104,7 +104,7 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
         // Revert optimistic update if failed
         setLikesCount(reel.likes || 0);
         toast.error("Failed to update like status");
-      }
+    }
     } catch (error) {
       console.error("Error liking reel:", error);
       // Revert optimistic update
@@ -196,13 +196,13 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex-shrink-0">
               {reel.product.images?.[0] && (
-                <SanityImage
+              <SanityImage
                   image={reel.product.images[0]}
-                  alt={reel.product.name || 'Product image'}
-                  width={48}
-                  height={48}
-                  className="object-cover w-full h-full"
-                />
+                alt={reel.product.name || 'Product image'}
+                width={48}
+                height={48}
+                className="object-cover w-full h-full"
+              />
               )}
             </div>
             <div className="flex-1">

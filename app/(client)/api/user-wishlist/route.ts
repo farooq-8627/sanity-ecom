@@ -16,12 +16,14 @@ export async function GET(req: Request) {
       );
     }
     
+    console.log("Fetching wishlist for user:", userId);
+    
     // Check if user has a wishlist in Sanity
     const userWishlist = await client.fetch(
       `*[_type == "userWishlist" && userId == $userId][0]{
         _id,
         userId,
-        products[] {
+        items[] {
           _key,
           productId,
           addedAt
@@ -32,25 +34,34 @@ export async function GET(req: Request) {
     
     // If no wishlist exists, return empty array
     if (!userWishlist) {
-      return NextResponse.json({ products: [] });
+      console.log("No wishlist found for user:", userId);
+      return NextResponse.json({ favoriteProduct: [] });
     }
     
+    console.log("Found wishlist with", userWishlist.items?.length || 0, "items for user", userId);
+    
     // Get product details for each item in wishlist
-    const productsWithDetails = await Promise.all(
-      userWishlist.products.map(async (item: any) => {
+    const wishlistProducts = await Promise.all(
+      (userWishlist.items || []).map(async (item: any) => {
         const product = await client.fetch(
           `*[_type == "product" && _id == $productId][0]`,
           { productId: item.productId }
         );
+        
+        if (!product) {
+          console.log(`Product not found for ID: ${item.productId}`);
+        }
         
         return product;
       })
     );
     
     // Filter out any null products (in case a product was deleted)
-    const validProducts = productsWithDetails.filter(product => product !== null);
+    const validProducts = wishlistProducts.filter(product => product !== null);
     
-    return NextResponse.json({ products: validProducts });
+    console.log("Returning", validProducts.length, "valid products for wishlist of user", userId);
+    
+    return NextResponse.json({ favoriteProduct: validProducts });
   } catch (error) {
     console.error("Error fetching user wishlist:", error);
     return NextResponse.json(
@@ -73,15 +84,21 @@ export async function POST(req: Request) {
       );
     }
     
-    // Get products from request
-    const { products } = await req.json();
+    // Get items from request
+    const body = await req.json();
+    console.log(`Received wishlist update request for user ${userId}:`, body);
     
-    if (!Array.isArray(products)) {
+    const { items } = body;
+    
+    if (!Array.isArray(items)) {
+      console.error("Invalid wishlist data format:", body);
       return NextResponse.json(
-        { error: "Invalid wishlist data. Products must be an array." },
+        { error: "Invalid wishlist data. Items must be an array." },
         { status: 400 }
       );
     }
+    
+    console.log(`Processing ${items.length} wishlist items for user ${userId}`);
     
     // Check if token exists
     if (!process.env.SANITY_API_TOKEN) {
@@ -96,12 +113,21 @@ export async function POST(req: Request) {
     }
     
     try {
-      // Format wishlist products for Sanity with _key property
-      const sanityWishlistProducts = products.map((product: any) => ({
-        _key: `${product._id}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-        productId: product._id,
-        addedAt: new Date().toISOString()
-      }));
+      // Format wishlist items for Sanity with _key property
+      const sanityWishlistItems = items.map((product: any, index: number) => {
+        if (!product || !product._id) {
+          console.error("Invalid product in wishlist items:", product);
+          throw new Error("Invalid product data in wishlist items");
+        }
+        
+        return {
+          _key: `${product._id}_${Date.now()}_${index}`,
+          productId: product._id,
+          addedAt: new Date().toISOString()
+        };
+      });
+      
+      console.log(`Formatted ${sanityWishlistItems.length} wishlist items for user ${userId}`);
       
       // Check if user already has a wishlist
       const existingWishlist = await client.fetch(
@@ -110,31 +136,49 @@ export async function POST(req: Request) {
       );
       
       if (existingWishlist) {
+        console.log(`Updating existing wishlist for user ${userId}:`, existingWishlist._id);
+        
         // Update existing wishlist
-        await backendClient
+        const result = await backendClient
           .patch(existingWishlist._id)
           .set({ 
-            products: sanityWishlistProducts,
+            items: sanityWishlistItems,
             updatedAt: new Date().toISOString()
           })
           .commit();
+          
+        console.log(`Wishlist updated successfully for user ${userId}:`, result._id);
+        
+        return NextResponse.json({ 
+          success: true,
+          itemCount: sanityWishlistItems.length,
+          userId: userId
+        });
       } else {
+        console.log(`Creating new wishlist for user ${userId}`);
+        
         // Create new wishlist
-        await backendClient.create({
+        const result = await backendClient.create({
           _type: 'userWishlist',
           userId,
-          products: sanityWishlistProducts,
+          items: sanityWishlistItems,
           updatedAt: new Date().toISOString()
         });
+        
+        console.log(`New wishlist created for user ${userId}:`, result._id);
+        
+        return NextResponse.json({ 
+          success: true,
+          itemCount: sanityWishlistItems.length,
+          userId: userId
+        });
       }
-      
-      return NextResponse.json({ success: true });
     } catch (error) {
-      console.error("Sanity write error:", error);
+      console.error(`Sanity write error for user ${userId}:`, error);
       return NextResponse.json(
         { 
           error: "Failed to update wishlist. Your token may be read-only.",
-          details: "Sanity write operation failed. Please ensure your token has write permissions."
+          details: error instanceof Error ? error.message : String(error)
         },
         { status: 500 }
       );
@@ -188,7 +232,7 @@ export async function PUT(req: Request) {
       const existingWishlist = await client.fetch(
         `*[_type == "userWishlist" && userId == $userId][0]{
           _id,
-          products[] {
+          items[] {
             _key,
             productId
           }
@@ -198,20 +242,20 @@ export async function PUT(req: Request) {
       
       if (existingWishlist) {
         // Check if product is already in wishlist
-        const isInWishlist = existingWishlist.products.some(
+        const isInWishlist = existingWishlist.items.some(
           (item: any) => item.productId === product._id
         );
         
         if (isInWishlist) {
           // Remove product from wishlist
-          const updatedProducts = existingWishlist.products.filter(
+          const updatedItems = existingWishlist.items.filter(
             (item: any) => item.productId !== product._id
           );
           
           await backendClient
             .patch(existingWishlist._id)
             .set({ 
-              products: updatedProducts,
+              items: updatedItems,
               updatedAt: new Date().toISOString()
             })
             .commit();
@@ -222,8 +266,8 @@ export async function PUT(req: Request) {
           });
         } else {
           // Add product to wishlist with _key property
-          const updatedProducts = [
-            ...existingWishlist.products,
+          const updatedItems = [
+            ...existingWishlist.items,
             {
               _key: `${product._id}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
               productId: product._id,
@@ -234,7 +278,7 @@ export async function PUT(req: Request) {
           await backendClient
             .patch(existingWishlist._id)
             .set({ 
-              products: updatedProducts,
+              items: updatedItems,
               updatedAt: new Date().toISOString()
             })
             .commit();
@@ -249,7 +293,7 @@ export async function PUT(req: Request) {
         await backendClient.create({
           _type: 'userWishlist',
           userId,
-          products: [
+          items: [
             {
               _key: `${product._id}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
               productId: product._id,

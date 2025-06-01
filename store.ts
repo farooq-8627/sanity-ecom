@@ -87,7 +87,14 @@ const useStore = create<StoreState>()(
           get().syncCartWithServer();
         }, 0);
       },
-      resetCart: () => set({ items: [] }),
+      resetCart: () => {
+        set({ items: [] });
+        
+        // Sync with server
+        setTimeout(() => {
+          get().syncCartWithServer();
+        }, 0);
+      },
       getTotalPrice: () => {
         return get().items.reduce(
           (total, item) => total + (item.product.price ?? 0) * item.quantity,
@@ -141,30 +148,35 @@ const useStore = create<StoreState>()(
           console.error("Error loading cart from server:", error);
         }
       },
-      addToFavorite: (product: Product) => {
-        return new Promise<void>((resolve) => {
-          set((state: StoreState) => {
-            const isFavorite = state.favoriteProduct.some(
-              (item) => item._id === product._id
-            );
+      addToFavorite: async (product: Product) => {
+        // First update local state for immediate UI feedback
+        let isAdded = false;
+        
+        set((state: StoreState) => {
+          const isFavorite = state.favoriteProduct.some(
+            (item) => item._id === product._id
+          );
+          
+          isAdded = !isFavorite;
+          
+          const newFavorites = isFavorite
+            ? state.favoriteProduct.filter(
+                (item) => item._id !== product._id
+              )
+            : [...state.favoriteProduct, { ...product }];
             
-            const newFavorites = isFavorite
-              ? state.favoriteProduct.filter(
-                  (item) => item._id !== product._id
-                )
-              : [...state.favoriteProduct, { ...product }];
-              
-            // Update local state
-            return {
-              favoriteProduct: newFavorites
-            };
-          });
-          
-          // Sync with server
-          get().syncWishlistWithServer();
-          
-          resolve();
+          return {
+            favoriteProduct: newFavorites
+          };
         });
+        
+        // Sync with server
+        try {
+          await get().syncWishlistWithServer();
+        } catch (error) {
+          console.error("Error updating wishlist:", error);
+          toast.error("Failed to update wishlist");
+        }
       },
       removeFromFavorite: (productId: string) => {
         set((state: StoreState) => ({
@@ -177,42 +189,65 @@ const useStore = create<StoreState>()(
         setTimeout(() => {
           get().syncWishlistWithServer();
         }, 0);
+        
+        toast.success("Removed from your wishlist");
       },
       resetFavorite: () => {
         set({ favoriteProduct: [] });
         
         // Sync with server
-        get().syncWishlistWithServer();
+        setTimeout(() => {
+          get().syncWishlistWithServer();
+        }, 0);
+        
+        toast.success("Wishlist cleared");
       },
       syncWishlistWithServer: async () => {
         try {
+          const favoriteProducts = get().favoriteProduct;
+          console.log(`Syncing wishlist with server... ${favoriteProducts.length} items`);
+          
+          // Don't sync if not logged in
           const response = await fetch('/api/user-wishlist', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ products: get().favoriteProduct }),
+            body: JSON.stringify({ items: favoriteProducts }),
           });
           
           if (!response.ok) {
             const errorData = await response.json();
             console.error("Error syncing wishlist with server:", errorData);
+            throw new Error(errorData.error || "Failed to sync wishlist");
           }
+          
+          const data = await response.json();
+          console.log("Wishlist sync response:", data);
+          return data;
         } catch (error) {
           console.error("Error syncing wishlist with server:", error);
+          throw error;
         }
       },
       loadWishlistFromServer: async () => {
         try {
+          console.log("Loading wishlist from server...");
           const response = await fetch('/api/user-wishlist');
           
           if (response.ok) {
             const data = await response.json();
-            if (data.products && Array.isArray(data.products)) {
-              set({ favoriteProduct: data.products });
+            console.log("Wishlist data received:", data);
+            
+            if (data.favoriteProduct && Array.isArray(data.favoriteProduct)) {
+              set({ favoriteProduct: data.favoriteProduct });
+              console.log("Wishlist updated in store with", data.favoriteProduct.length, "items");
+            } else {
+              console.error("Invalid wishlist data format:", data);
             }
           } else {
-            console.error("Error loading wishlist from server:", await response.json());
+            const errorData = await response.json();
+            console.error("Error loading wishlist from server:", errorData);
           }
         } catch (error) {
           console.error("Error loading wishlist from server:", error);

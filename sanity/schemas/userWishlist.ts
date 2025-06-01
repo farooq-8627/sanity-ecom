@@ -13,8 +13,8 @@ export default defineType({
       validation: (Rule) => Rule.required()
     }),
     defineField({
-      name: 'products',
-      title: 'Wishlist Products',
+      name: 'items',
+      title: 'Wishlist Items',
       type: 'array',
       of: [
         {

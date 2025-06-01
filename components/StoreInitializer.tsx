@@ -4,18 +4,27 @@ import { useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import useStore from "@/store";
 
+/**
+ * StoreInitializer component
+ * Loads cart data from server when a user is logged in
+ * Note: Wishlist data is now handled by UserWishlistInitializer
+ */
 export default function StoreInitializer() {
-  const { isSignedIn, isLoaded } = useUser();
-  const { loadCartFromServer, loadWishlistFromServer } = useStore();
+  const { isSignedIn, isLoaded, user } = useUser();
+  const { loadCartFromServer } = useStore();
   
   useEffect(() => {
-    // Only load data from server if user is signed in
+    // Only load data when user is signed in and clerk has loaded
     if (isLoaded && isSignedIn) {
-      loadCartFromServer();
-      loadWishlistFromServer();
+      console.log("StoreInitializer: Loading cart data for user", user?.id);
+      
+      // Load cart data
+      loadCartFromServer().catch(error => {
+        console.error('Error loading cart data:', error);
+      });
     }
-  }, [isSignedIn, isLoaded, loadCartFromServer, loadWishlistFromServer]);
+  }, [isSignedIn, isLoaded, loadCartFromServer, user?.id]);
   
-  // This is a utility component that doesn't render anything
+  // This component doesn't render anything
   return null;
 } 

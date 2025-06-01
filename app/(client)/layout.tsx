@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { ClerkProvider } from "@clerk/nextjs";
 import StoreInitializer from "@/components/StoreInitializer";
+// import UserWishlistInitializer from "@/components/UserWishlistInitializer";
 import { Toaster } from "react-hot-toast";
 
 export const metadata: Metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({
     <ClerkProvider>
       <div className="flex flex-col min-h-screen">
         <StoreInitializer />
+        {/* <UserWishlistInitializer /> */}
         <Toaster position="top-center" />
         <Header />
         <main className="flex-1">{children}</main>

@@ -27,8 +27,8 @@ const ProductSideMenu = ({
       addToFavorite(product).then(() => {
         toast.success(
           existingProduct
-            ? "Product removed successfully!"
-            : "Product added successfully!"
+            ? "Product removed from wishlist"
+            : "Product added to wishlist"
         );
       });
     }

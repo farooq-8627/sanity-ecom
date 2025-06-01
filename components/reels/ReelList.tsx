@@ -280,13 +280,13 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
               onTouchEnd={() => setPressedReelId(null)}
             >
               <div className="flex items-center justify-center h-full max-w-md mx-auto px-4">
-                <ReelCard 
-                  reel={reel} 
-                  onProductOpen={handleProductOpen}
-                  isPressed={pressedReelId === reel._id}
+              <ReelCard 
+                reel={reel} 
+                onProductOpen={handleProductOpen}
+                isPressed={pressedReelId === reel._id}
                   globalMuted={globalMuted}
                   onToggleMute={handleToggleMute}
-                />
+              />
               </div>
             </div>
           ))}
@@ -309,83 +309,83 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
       {!isMobile && (
         <div className="hidden md:block md:w-[40%] p-4 overflow-y-auto border-l border-gray-100">
           {selectedProduct ? (
-            <div className="bg-white rounded-lg p-4">
+          <div className="bg-white rounded-lg p-4">
               <div className="flex flex-col gap-4">
                 {/* Product Images */}
                 <div>
-                  <ProductImageCarousel 
-                    images={convertSanityImagesToUrls(selectedProduct.images || [])}
-                    title={selectedProduct.name || ''}
-                  />
-                </div>
+                <ProductImageCarousel 
+                  images={convertSanityImagesToUrls(selectedProduct.images || [])}
+                  title={selectedProduct.name || ''}
+                />
+              </div>
 
                 {/* Product Details */}
                 <div className="flex flex-col">
-                  <div className="flex items-start justify-between gap-4 mb-3">
+                <div className="flex items-start justify-between gap-4 mb-3">
                     <div>
                       <h2 className="text-xl font-medium mb-1">{selectedProduct.name}</h2>
-                      <p className="text-gray-600 text-sm line-clamp-2">{selectedProduct.description}</p>
-                    </div>
-                    <button 
-                      onClick={() => handleAddToWishlist(selectedProduct)}
+                    <p className="text-gray-600 text-sm line-clamp-2">{selectedProduct.description}</p>
+                  </div>
+                  <button 
+                    onClick={() => handleAddToWishlist(selectedProduct)}
                       className={`p-1.5 hover:bg-gray-50 rounded-full ${
-                        favoriteProduct.some(item => item._id === selectedProduct._id)
-                          ? "text-shop_light_green"
-                          : ""
-                      }`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill={favoriteProduct.some(item => item._id === selectedProduct._id) ? "#3b9c3c" : "none"} viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-                      </svg>
-                    </button>
-                  </div>
+                      favoriteProduct.some(item => item._id === selectedProduct._id)
+                        ? "text-shop_light_green"
+                        : ""
+                    }`}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill={favoriteProduct.some(item => item._id === selectedProduct._id) ? "#3b9c3c" : "none"} viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
+                    </svg>
+                  </button>
+                </div>
 
-                  {/* Price Display */}
-                  <div className="mb-4">
-                    <PriceView 
-                      price={selectedProduct.price} 
-                      discount={selectedProduct.discount}
-                      className="text-2xl font-bold"
-                    />
-                  </div>
+                {/* Price Display */}
+                <div className="mb-4">
+                  <PriceView 
+                    price={selectedProduct.price} 
+                    discount={selectedProduct.discount}
+                    className="text-2xl font-bold"
+                  />
+                </div>
 
-                  {/* Quantity Selector */}
-                  <div className="flex items-center gap-4 mb-4">
-                    <span className="text-sm text-gray-600">Quantity:</span>
-                    <QuantityButtons product={selectedProduct} />
-                  </div>
+                {/* Quantity Selector */}
+                <div className="flex items-center gap-4 mb-4">
+                  <span className="text-sm text-gray-600">Quantity:</span>
+                  <QuantityButtons product={selectedProduct} />
+                </div>
 
-                  {/* Stock Status */}
-                  <div className="mb-6">
-                    <span className={`px-2 py-1 rounded text-sm ${selectedProduct.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {selectedProduct.stock > 0 ? 'In Stock' : 'Out of Stock'}
-                    </span>
-                  </div>
+                {/* Stock Status */}
+                <div className="mb-6">
+                  <span className={`px-2 py-1 rounded text-sm ${selectedProduct.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {selectedProduct.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                  </span>
+                </div>
 
-                  {/* Action Buttons */}
-                  <div className="mt-auto flex items-center gap-2">
-                    {isInCart(selectedProduct._id) ? (
-                      <button
-                        onClick={() => router.push('/cart')}
-                        className="flex-1 py-2 px-3 bg-shop_light_green text-white text-sm rounded-lg hover:bg-shop_dark_green transition-colors"
-                      >
-                        View Cart
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleAddToCart(selectedProduct)}
-                        className="flex-1 py-2 px-3 bg-black text-white text-sm rounded-lg hover:bg-black/90 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                        disabled={selectedProduct.stock === 0}
-                      >
-                        {selectedProduct.stock === 0 ? "Out of Stock" : "Add to Cart"}
-                      </button>
-                    )}
+                {/* Action Buttons */}
+                <div className="mt-auto flex items-center gap-2">
+                  {isInCart(selectedProduct._id) ? (
                     <button
-                      onClick={() => selectedProduct.slug.current && router.push(`/product/${selectedProduct.slug.current}`)}
-                      className="py-2 px-3 text-sm text-gray-600 hover:text-gray-900"
+                      onClick={() => router.push('/cart')}
+                      className="flex-1 py-2 px-3 bg-shop_light_green text-white text-sm rounded-lg hover:bg-shop_dark_green transition-colors"
                     >
-                      View Details
+                      View Cart
                     </button>
+                  ) : (
+                    <button
+                      onClick={() => handleAddToCart(selectedProduct)}
+                      className="flex-1 py-2 px-3 bg-black text-white text-sm rounded-lg hover:bg-black/90 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      disabled={selectedProduct.stock === 0}
+                    >
+                      {selectedProduct.stock === 0 ? "Out of Stock" : "Add to Cart"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => selectedProduct.slug.current && router.push(`/product/${selectedProduct.slug.current}`)}
+                    className="py-2 px-3 text-sm text-gray-600 hover:text-gray-900"
+                  >
+                      View Details
+                  </button>
                   </div>
                 </div>
               </div>
@@ -399,10 +399,10 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
                 </svg>
                 <h3 className="text-lg font-medium mb-2">Select a product</h3>
                 <p className="text-sm">Click on a product in the reels to view details</p>
-              </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
       )}
     </div>
   );
