@@ -46,6 +46,34 @@ export const productReelType = defineType({
       validation: (Rule) => Rule.min(0),
     }),
     defineField({
+      name: "likedBy",
+      title: "Liked By",
+      type: "array",
+      description: "Users who have liked this reel",
+      of: [
+        {
+          type: "object",
+          fields: [
+            defineField({
+              name: "userId",
+              title: "User ID",
+              type: "string",
+              validation: (Rule) => Rule.required()
+            }),
+            defineField({
+              name: "likedAt",
+              title: "Liked At",
+              type: "datetime",
+              initialValue: () => new Date().toISOString()
+            })
+          ]
+        }
+      ],
+      options: {
+        sortable: false
+      }
+    }),
+    defineField({
       name: "tags",
       title: "Tags",
       type: "array",

@@ -20,6 +20,26 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Setting Up Sanity API Token
+
+For the reel likes functionality to work correctly, you need to set up a Sanity API token with write permissions:
+
+1. Create a token in your Sanity project settings with write permissions
+2. Run the setup script to add it to your environment:
+
+```bash
+node setup-env.js
+```
+
+3. Enter your Sanity API token when prompted
+4. Restart your development server
+
+Alternatively, you can manually add the token to your `.env.local` file:
+
+```
+SANITY_API_TOKEN=your_token_here
+```
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

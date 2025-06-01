@@ -6,6 +6,8 @@ import { useInView } from "react-intersection-observer";
 import { PlayIcon, PauseIcon, HeartIcon, ShareIcon, Volume2Icon, VolumeXIcon } from "lucide-react";
 import SanityImage from "../SanityImage";
 import toast from "react-hot-toast";
+import { useUser } from "@clerk/nextjs";
+import useStore from "@/store";
 
 interface ReelCardProps {
   reel: ProductReel;
@@ -17,12 +19,16 @@ interface ReelCardProps {
 
 export default function ReelCard({ reel, onProductOpen, isPressed = false, globalMuted, onToggleMute }: ReelCardProps) {
   const [playing, setPlaying] = useState(false);
-  const [liked, setLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(reel.likes || 0);
+  const [isLiking, setIsLiking] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const wasInView = useRef<boolean>(false);
   const { ref, inView } = useInView({
     threshold: 0.7,
   });
+  const { isSignedIn } = useUser();
+  const { toggleReelLike, isReelLiked } = useStore();
+  const liked = isReelLiked(reel._id);
 
   // Control video playback based on visibility
   useEffect(() => {
@@ -75,9 +81,47 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
     onToggleMute(!globalMuted);
   };
 
-  const toggleLike = (e: React.MouseEvent) => {
+  const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setLiked(!liked);
+    
+    if (!isSignedIn) {
+      toast.error("Please sign in to like reels");
+      return;
+    }
+    
+    if (isLiking) return; // Prevent multiple clicks
+    
+    try {
+      setIsLiking(true);
+      
+      // Update likes count optimistically for better UX
+      const newLikesCount = liked ? likesCount - 1 : likesCount + 1;
+      setLikesCount(newLikesCount);
+      
+      const success = await toggleReelLike(reel._id);
+      
+      if (!success) {
+        // Revert optimistic update if failed
+        setLikesCount(reel.likes || 0);
+        toast.error("Failed to update like status");
+      }
+    } catch (error) {
+      console.error("Error liking reel:", error);
+      // Revert optimistic update
+      setLikesCount(reel.likes || 0);
+      
+      if (error instanceof Error) {
+        if (error.message.includes("Server is not configured properly")) {
+          toast.error("Server needs a write token. Check setup instructions.");
+        } else {
+          toast.error("Something went wrong. Please try again later.");
+        }
+      } else {
+        toast.error("Something went wrong. Please try again later.");
+      }
+    } finally {
+      setIsLiking(false);
+    }
   };
 
   const handleShare = (e: React.MouseEvent) => {
@@ -173,14 +217,15 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
         {/* Interaction Buttons */}
         <div className="absolute right-4 bottom-24 flex flex-col gap-4 pointer-events-auto">
           <button 
-            onClick={toggleLike}
-            className="p-2 rounded-full bg-black/20 backdrop-blur-sm"
+            onClick={handleLike}
+            className={`p-2 rounded-full ${liked ? 'bg-red-500/30' : 'bg-black/20'} backdrop-blur-sm transition-all ${isLiking ? 'opacity-50' : ''}`}
+            disabled={isLiking}
           >
             <HeartIcon 
               size={24} 
               className={liked ? "text-red-500 fill-red-500" : "text-white"} 
             />
-            <span className="text-xs text-white block mt-1">{reel.likes || 0}</span>
+            <span className="text-xs text-white block mt-1">{likesCount}</span>
           </button>
           <button 
             onClick={handleShare}

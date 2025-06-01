@@ -12,6 +12,7 @@ import { urlFor } from "@/sanity/lib/image";
 import QuantityButtons from "../QuantityButtons";
 import PriceView from "../PriceView";
 import { client } from "@/sanity/lib/client";
+import { useUser } from "@clerk/nextjs";
 
 interface ReelListProps {
   reels: ProductReel[];
@@ -39,7 +40,8 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
   const isScrollingRef = useRef<boolean>(false);
   const router = useRouter();
   const pathname = usePathname();
-  const { addItem, addToFavorite, favoriteProduct, items } = useStore();
+  const { addItem, addToFavorite, favoriteProduct, items, likedReels } = useStore();
+  const { isSignedIn, user } = useUser();
   
   // Track which reel is currently visible
   const [visibleReelIds, setVisibleReelIds] = useState<Set<string>>(new Set());
@@ -214,6 +216,49 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
   const handleToggleMute = (muted: boolean) => {
     setGlobalMuted(muted);
   };
+
+  // Sync likes with backend when component mounts
+  useEffect(() => {
+    const syncLikesWithBackend = async () => {
+      if (!isSignedIn || !user) return;
+      
+      try {
+        // For each reel, check if it's liked in Sanity
+        const likePromises = reels.map(async (reel) => {
+          const response = await fetch('/api/reel-like/check', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ reelId: reel._id }),
+          });
+          
+          if (response.ok) {
+            const { liked } = await response.json();
+            return { reelId: reel._id, liked };
+          }
+          return null;
+        });
+        
+        const results = await Promise.all(likePromises);
+        
+        // Update local store with backend data
+        const likedReelIds = results
+          .filter(result => result && result.liked)
+          .map(result => result!.reelId);
+          
+        if (likedReelIds.length > 0) {
+          useStore.setState(state => ({
+            likedReels: [...new Set([...state.likedReels, ...likedReelIds])]
+          }));
+        }
+      } catch (error) {
+        console.error("Error syncing likes with backend:", error);
+      }
+    };
+    
+    syncLikesWithBackend();
+  }, [isSignedIn, user, reels]);
 
   return (
     <div className="flex flex-col md:flex-row w-full h-full">
