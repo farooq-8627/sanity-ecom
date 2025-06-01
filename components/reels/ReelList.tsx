@@ -34,7 +34,6 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [pressedReelId, setPressedReelId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [hasScrolled, setHasScrolled] = useState(false);
   const [globalMuted, setGlobalMuted] = useState(true);
   const [currentReelIndex, setCurrentReelIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -95,7 +94,6 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
           const product = await client.fetch(query, { 
             slug: reel.product.slug.current 
           });
-          console.log('Fetched product:', product); // Debug log
           setSelectedProduct(product);
         }
       } else {
@@ -161,47 +159,18 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
   }, []);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (!hasScrolled && e.currentTarget.scrollTop > 10) {
-      setHasScrolled(true);
-    }
-    
-    // Update URL based on which reel is most visible
+    // Get the scroll container and its current scroll position
     const scrollContainer = e.currentTarget;
     const scrollTop = scrollContainer.scrollTop;
-    const scrollDirection = scrollTop > lastScrollPosition.current ? 'down' : 'up';
-    lastScrollPosition.current = scrollTop;
     
-    // Find which reel is most visible
+    // Calculate the current reel index based on scroll position and container height
     const containerHeight = scrollContainer.clientHeight;
-    let maxVisibleRatio = 0;
-    let mostVisibleReelIndex = 0;
+    const currentIndex = Math.round(scrollTop / containerHeight);
     
-    const reelElements = Array.from(scrollContainer.children);
-    
-    reelElements.forEach((reelElement, index) => {
-      if (reelElement instanceof HTMLElement) {
-        const rect = reelElement.getBoundingClientRect();
-        const reelTop = rect.top;
-        const reelBottom = rect.bottom;
-        const reelHeight = rect.height;
-        
-        // Calculate how much of the reel is visible
-        const visibleTop = Math.max(0, reelTop);
-        const visibleBottom = Math.min(containerHeight, reelBottom);
-        const visibleHeight = Math.max(0, visibleBottom - visibleTop);
-        const visibleRatio = visibleHeight / reelHeight;
-        
-        if (visibleRatio > maxVisibleRatio) {
-          maxVisibleRatio = visibleRatio;
-          mostVisibleReelIndex = index;
-        }
-      }
-    });
-    
-    // Only update if the most visible reel has changed
-    if (mostVisibleReelIndex !== currentReelIndex && maxVisibleRatio > 0.5) {
-      setCurrentReelIndex(mostVisibleReelIndex);
-      const currentReel = reels[mostVisibleReelIndex];
+    // Only update if the index has changed
+    if (currentIndex !== currentReelIndex && currentIndex >= 0 && currentIndex < reels.length) {
+      setCurrentReelIndex(currentIndex);
+      const currentReel = reels[currentIndex];
       
       if (currentReel?.product?.slug?.current) {
         // Update URL without full page reload
@@ -224,13 +193,13 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
       <div className={`w-full ${!isMobile && 'md:w-[60%]'} h-full flex items-center justify-center -my-16`}>
         <div 
           ref={scrollContainerRef}
-          className="h-full w-full snap-y snap-mandatory overflow-y-auto scrollbar-hide overscroll-y-contain"
+          className="h-full w-full overflow-y-auto scrollbar-hide overscroll-y-contain snap-y snap-mandatory"
           onScroll={handleScroll}
         >
           {reels.map((reel) => (
             <div 
               key={reel._id} 
-              className="h-full w-full snap-start flex items-center justify-center"
+              className="h-full w-full snap-start snap-always flex items-center justify-center"
               onMouseDown={() => setPressedReelId(reel._id)}
               onMouseUp={() => setPressedReelId(null)}
               onMouseLeave={() => setPressedReelId(null)}

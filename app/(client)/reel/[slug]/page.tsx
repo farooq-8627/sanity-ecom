@@ -73,7 +73,10 @@ const reelBySlugQuery = groq`*[_type == "productReel" && product->slug.current =
 }`;
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const reel = await client.fetch(reelBySlugQuery, { slug: params.slug });
+  // Properly await the params object before accessing its properties
+  const { slug } = await params;
+  
+  const reel = await client.fetch(reelBySlugQuery, { slug });
   
   if (!reel) {
     return {
@@ -89,8 +92,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function ReelPage({ params }: { params: { slug: string } }) {
+  // Properly await the params object before accessing its properties
+  const { slug } = await params;
+  
   const allReels = await client.fetch(reelsQuery);
-  const currentReel = await client.fetch(reelBySlugQuery, { slug: params.slug });
+  const currentReel = await client.fetch(reelBySlugQuery, { slug });
   
   if (!currentReel) {
     notFound();
@@ -98,7 +104,7 @@ export default async function ReelPage({ params }: { params: { slug: string } })
   
   // Find the index of the current reel in all reels
   const currentReelIndex = allReels.findIndex(
-    (reel: any) => reel.product.slug.current === params.slug
+    (reel: any) => reel.product.slug.current === slug
   );
   
   if (currentReelIndex === -1) {
@@ -113,7 +119,7 @@ export default async function ReelPage({ params }: { params: { slug: string } })
 
   return (
     <main className="h-full w-full">
-      <ReelList reels={reorderedReels} initialSlug={params.slug} />
+      <ReelList reels={reorderedReels} initialSlug={slug} />
     </main>
   );
 } 
