@@ -39,15 +39,5 @@ export interface ProductReel {
   };
   likes: number;
   views: number;
-  comments: {
-    _id: string;
-    user: {
-      name: string;
-      image: string;
-    };
-    comment: string;
-    createdAt: string;
-  }[];
-  shareCount: number;
   tags: string[];
 } 

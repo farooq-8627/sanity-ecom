@@ -8,7 +8,6 @@ import Image from "next/image";
 import useStore from "@/store";
 import toast from "react-hot-toast";
 import ProductImageCarousel from "../ProductImageCarousel";
-import ReelComments from "./ReelComments";
 import { urlFor } from "@/sanity/lib/image";
 import QuantityButtons from "../QuantityButtons";
 import PriceView from "../PriceView";
@@ -37,6 +36,7 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
   const [globalMuted, setGlobalMuted] = useState(true);
   const [currentReelIndex, setCurrentReelIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isScrollingRef = useRef<boolean>(false);
   const router = useRouter();
   const pathname = usePathname();
   const { addItem, addToFavorite, favoriteProduct, items } = useStore();
@@ -62,12 +62,19 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
     };
   }, []);
   
-  // Set initial product ID based on initialSlug if provided
+  // Set initial product ID and scroll position based on initialSlug if provided
   useEffect(() => {
     if (initialSlug && reels.length > 0) {
-      const initialReel = reels.find(reel => reel.product.slug.current === initialSlug);
-      if (initialReel) {
-        setSelectedProductId(initialReel.product._id);
+      const initialReelIndex = reels.findIndex(reel => reel.product.slug.current === initialSlug);
+      if (initialReelIndex !== -1) {
+        setSelectedProductId(reels[initialReelIndex].product._id);
+        setCurrentReelIndex(initialReelIndex);
+        
+        // Scroll to the initial reel without animation
+        if (scrollContainerRef.current) {
+          const containerHeight = scrollContainerRef.current.clientHeight;
+          scrollContainerRef.current.scrollTop = initialReelIndex * containerHeight;
+        }
       }
     }
   }, [initialSlug, reels]);
@@ -159,6 +166,9 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
   }, []);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    // Avoid processing scroll events while programmatic scrolling is happening
+    if (isScrollingRef.current) return;
+    
     // Get the scroll container and its current scroll position
     const scrollContainer = e.currentTarget;
     const scrollTop = scrollContainer.scrollTop;
@@ -183,6 +193,24 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
     }
   };
 
+  // Function to scroll to a specific reel
+  const scrollToReel = (index: number) => {
+    if (scrollContainerRef.current && index >= 0 && index < reels.length) {
+      isScrollingRef.current = true;
+      const containerHeight = scrollContainerRef.current.clientHeight;
+      
+      scrollContainerRef.current.scrollTo({
+        top: index * containerHeight,
+        behavior: 'smooth'
+      });
+      
+      // Reset the scrolling flag after animation completes
+      setTimeout(() => {
+        isScrollingRef.current = false;
+      }, 500);
+    }
+  };
+
   const handleToggleMute = (muted: boolean) => {
     setGlobalMuted(muted);
   };
@@ -196,7 +224,7 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
           className="h-full w-full overflow-y-auto scrollbar-hide overscroll-y-contain snap-y snap-mandatory"
           onScroll={handleScroll}
         >
-          {reels.map((reel) => (
+          {reels.map((reel, index) => (
             <div 
               key={reel._id} 
               className="h-full w-full snap-start snap-always flex items-center justify-center"

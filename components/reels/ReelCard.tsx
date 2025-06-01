@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { ProductReel } from "@/types/ProductReel";
 import { useInView } from "react-intersection-observer";
-import { PlayIcon, PauseIcon, HeartIcon, ShareIcon, MessageCircleIcon, Volume2Icon, VolumeXIcon } from "lucide-react";
+import { PlayIcon, PauseIcon, HeartIcon, ShareIcon, Volume2Icon, VolumeXIcon } from "lucide-react";
 import SanityImage from "../SanityImage";
+import toast from "react-hot-toast";
 
 interface ReelCardProps {
   reel: ProductReel;
@@ -18,6 +19,7 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
   const [playing, setPlaying] = useState(false);
   const [liked, setLiked] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const wasInView = useRef<boolean>(false);
   const { ref, inView } = useInView({
     threshold: 0.7,
   });
@@ -26,9 +28,15 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
   useEffect(() => {
     if (videoRef.current) {
       if (inView) {
+        // Reset video to beginning if this is a re-entry into view
+        if (!wasInView.current) {
+          videoRef.current.currentTime = 0;
+        }
+        
         videoRef.current.play()
           .then(() => {
             setPlaying(true);
+            wasInView.current = true;
           })
           .catch((e) => {
             console.log("Playback error:", e);
@@ -36,6 +44,8 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
       } else {
         videoRef.current.pause();
         setPlaying(false);
+        // Mark that we've left view
+        wasInView.current = false;
       }
     }
   }, [inView]);
@@ -68,6 +78,23 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
   const toggleLike = (e: React.MouseEvent) => {
     e.stopPropagation();
     setLiked(!liked);
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Get the current URL
+    const currentUrl = window.location.href;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(currentUrl)
+      .then(() => {
+        toast.success("Reel URL copied to clipboard!");
+      })
+      .catch((error) => {
+        console.error("Failed to copy URL: ", error);
+        toast.error("Failed to copy URL");
+      });
   };
 
   return (
@@ -155,13 +182,11 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
             />
             <span className="text-xs text-white block mt-1">{reel.likes || 0}</span>
           </button>
-          <button className="p-2 rounded-full bg-black/20 backdrop-blur-sm">
-            <MessageCircleIcon size={24} className="text-white" />
-            <span className="text-xs text-white block mt-1">{reel.comments?.length || 0}</span>
-          </button>
-          <button className="p-2 rounded-full bg-black/20 backdrop-blur-sm">
+          <button 
+            onClick={handleShare}
+            className="p-2 rounded-full bg-black/20 backdrop-blur-sm"
+          >
             <ShareIcon size={24} className="text-white" />
-            <span className="text-xs text-white block mt-1">{reel.shareCount || 0}</span>
           </button>
         </div>
       </div>

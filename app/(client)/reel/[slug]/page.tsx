@@ -25,16 +25,6 @@ const reelsQuery = groq`*[_type == "productReel"] {
   },
   likes,
   views,
-  comments[] {
-    _id,
-    user-> {
-      name,
-      "image": avatar.asset->url
-    },
-    comment,
-    _createdAt
-  },
-  shareCount,
   tags
 } | order(_createdAt desc)`;
 
@@ -59,16 +49,6 @@ const reelBySlugQuery = groq`*[_type == "productReel" && product->slug.current =
   },
   likes,
   views,
-  comments[] {
-    _id,
-    user-> {
-      name,
-      "image": avatar.asset->url
-    },
-    comment,
-    _createdAt
-  },
-  shareCount,
   tags
 }`;
 

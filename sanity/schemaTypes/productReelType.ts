@@ -46,47 +46,10 @@ export const productReelType = defineType({
       validation: (Rule) => Rule.min(0),
     }),
     defineField({
-      name: "comments",
-      title: "Comments",
-      type: "array",
-      of: [
-        {
-          type: "object",
-          fields: [
-            defineField({
-              name: "user",
-              title: "User",
-              type: "string",
-              validation: (Rule) => Rule.required(),
-            }),
-            defineField({
-              name: "comment",
-              title: "Comment",
-              type: "text",
-              validation: (Rule) => Rule.required(),
-            }),
-            defineField({
-              name: "createdAt",
-              title: "Created At",
-              type: "datetime",
-              initialValue: () => new Date().toISOString(),
-            }),
-          ],
-        },
-      ],
-    }),
-    defineField({
       name: "tags",
       title: "Tags",
       type: "array",
       of: [{ type: "string" }],
-    }),
-    defineField({
-      name: "shareCount",
-      title: "Share Count",
-      type: "number",
-      initialValue: 0,
-      validation: (Rule) => Rule.min(0),
     }),
   ],
   preview: {
