@@ -8,23 +8,27 @@ import NoProductAvailable from "./NoProductAvailable";
 import { Loader2 } from "lucide-react";
 import Container from "./Container";
 import HomeTabbar from "./HomeTabbar";
-import { productType } from "@/constants/data";
 import { Product } from "@/sanity.types";
+import { getProductVariants } from "@/lib/sanity/queries";
 
 const ProductGrid = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedTab, setSelectedTab] = useState(productType[0]?.title || "");
-  const query = `*[_type == "product" && variant == $variant] | order(name asc){
-  ...,"categories": categories[]->title
-}`;
-  const params = { variant: selectedTab.toLowerCase() };
+  const [selectedTab, setSelectedTab] = useState("");
+  
+  // Updated query to match products by variant reference title
+  const query = `*[_type == "product" && variant->title == $variant] | order(name asc){
+    ...,"categories": categories[]->title
+  }`;
 
   useEffect(() => {
+    // Only fetch products if a tab is selected
+    if (!selectedTab) return;
+    
     const fetchData = async () => {
       setLoading(true);
       try {
-        const response = await client.fetch(query, params);
+        const response = await client.fetch(query, { variant: selectedTab });
         setProducts(await response);
       } catch (error) {
         console.log("Product fetching Error", error);
@@ -33,20 +37,15 @@ const ProductGrid = () => {
       }
     };
     fetchData();
-  }, [selectedTab]);
+  }, [selectedTab, query]);
 
   return (
     <Container className="flex flex-col px-2 lg:px-0 my-10">
       <HomeTabbar selectedTab={selectedTab} onTabSelect={setSelectedTab} />
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-10 min-h-80 space-y-4 text-center bg-gray-100 rounded-lg w-full mt-10">
-          <motion.div className="flex items-center space-x-2 text-blue-600">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span>Product is loading...</span>
-          </motion.div>
-        </div>
+      { loading ? (
+        <NoProductAvailable selectedTab={selectedTab} />
       ) : products?.length ? (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 mt-4 sm:mt-10">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 mt-4 sm:mt-8">
           <>
             {products?.map((product) => (
               <AnimatePresence key={product?._id}>

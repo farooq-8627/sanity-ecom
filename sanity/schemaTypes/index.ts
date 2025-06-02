@@ -9,6 +9,7 @@ import { blogCategoryType } from "./blogCategoryType";
 import { authorType } from "./authorType";
 import { addressType } from "./addressType";
 import { productReelType } from "./productReelType";
+import productVariantType from "./productVariantType";
 import userCart from "../schemas/userCart";
 import userWishlist from "../schemas/userWishlist";
 
@@ -24,6 +25,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     authorType,
     addressType,
     productReelType,
+    productVariantType,
     userCart,
     userWishlist,
   ],

@@ -80,18 +80,9 @@ export const productType = defineType({
     defineField({
       name: "variant",
       title: "Product Type",
-      type: "string",
-      options: {
-        list: [
-          { title: "Fashion", value: "fashion" },
-          { title: "Electronics", value: "electronics" },
-          { title: "Home & Kitchen", value: "home-kitchen" },
-          { title: "Beauty & Personal Care", value: "beauty-personal-care" },
-          { title: "Sports & Outdoors", value: "sports-outdoors" },
-          { title: "Toys & Games", value: "toys-games" },
-          { title: "Others", value: "others" },
-        ],
-      },
+      type: "reference",
+      to: { type: "productVariant" },
+      description: "Select a product variant from the list",
     }),
     defineField({
       name: "isFeatured",
