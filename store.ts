@@ -22,8 +22,8 @@ interface StoreState {
   loadCartFromServer: () => Promise<void>;
   //   // favorite
   favoriteProduct: Product[];
-  addToFavorite: (product: Product) => Promise<void>;
-  removeFromFavorite: (productId: string) => void;
+  addToFavorite: (product: Product) => Promise<boolean>;
+  removeFromFavorite: (productId: string) => boolean;
   resetFavorite: () => void;
   syncWishlistWithServer: () => Promise<void>;
   loadWishlistFromServer: () => Promise<void>;
@@ -31,6 +31,8 @@ interface StoreState {
   likedReels: string[];
   toggleReelLike: (reelId: string) => Promise<boolean>;
   isReelLiked: (reelId: string) => boolean;
+  // Auth check
+  isUserAuthenticated: () => Promise<boolean>;
 }
 
 const useStore = create<StoreState>()(
@@ -39,6 +41,18 @@ const useStore = create<StoreState>()(
       items: [],
       favoriteProduct: [],
       likedReels: [],
+      isUserAuthenticated: async () => {
+        try {
+          // Make a request to an API endpoint that requires authentication
+          const response = await fetch('/api/auth-check');
+          const isAuthenticated = response.status === 200;
+          console.log("Auth check result:", isAuthenticated, "Status:", response.status);
+          return isAuthenticated;
+        } catch (error) {
+          console.error('Error checking authentication status:', error);
+          return false;
+        }
+      },
       addItem: (product) => {
         set((state) => {
           const existingItem = state.items.find(
@@ -59,7 +73,9 @@ const useStore = create<StoreState>()(
         
         // Sync with server after updating local state
         setTimeout(() => {
-          get().syncCartWithServer();
+          get().syncCartWithServer().then(() => {
+            toast.success(`${product?.name?.substring(0, 12)}... added to cart`);
+          });
         }, 0);
       },
       removeItem: (productId) => {
@@ -122,6 +138,13 @@ const useStore = create<StoreState>()(
       getGroupedItems: () => get().items,
       syncCartWithServer: async () => {
         try {
+          // Don't attempt to sync if not authenticated
+          const isAuthenticated = await get().isUserAuthenticated();
+          if (!isAuthenticated) {
+            console.log("User not authenticated, skipping cart sync");
+            return { success: false, reason: "not_authenticated" };
+          }
+          
           console.log("Syncing cart with server...", get().items.length, "items");
           
           const response = await fetch('/api/user-cart', {
@@ -131,6 +154,11 @@ const useStore = create<StoreState>()(
             },
             body: JSON.stringify({ items: get().items }),
           });
+          
+          if (response.status === 401) {
+            console.log("User not authenticated, skipping cart sync");
+            return { success: false, reason: "not_authenticated" };
+          }
           
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
@@ -148,8 +176,20 @@ const useStore = create<StoreState>()(
       },
       loadCartFromServer: async () => {
         try {
+          // Don't attempt to load if not authenticated
+          const isAuthenticated = await get().isUserAuthenticated();
+          if (!isAuthenticated) {
+            console.log("User not authenticated, skipping cart load");
+            return { success: false, reason: "not_authenticated" };
+          }
+          
           console.log("Loading cart data from server...");
           const response = await fetch('/api/user-cart');
+          
+          if (response.status === 401) {
+            console.log("User not authenticated, skipping cart load");
+            return { success: false, reason: "not_authenticated" };
+          }
           
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
@@ -181,6 +221,16 @@ const useStore = create<StoreState>()(
         }
       },
       addToFavorite: async (product: Product) => {
+        // Check if user is authenticated first - but don't show toast here
+        // The component will handle the auth flow with SignInButton
+        const isAuthenticated = await get().isUserAuthenticated();
+        console.log("addToFavorite - isAuthenticated:", isAuthenticated);
+        
+        if (!isAuthenticated) {
+          console.log("User not authenticated, returning false");
+          return false;
+        }
+        
         // First update local state for immediate UI feedback
         let isAdded = false;
         
@@ -205,24 +255,38 @@ const useStore = create<StoreState>()(
         // Sync with server
         try {
           await get().syncWishlistWithServer();
+         
+          return true;
         } catch (error) {
           console.error("Error updating wishlist:", error);
           toast.error("Failed to update wishlist");
+          return false;
         }
       },
       removeFromFavorite: (productId: string) => {
-        set((state: StoreState) => ({
-          favoriteProduct: state.favoriteProduct.filter(
-            (item) => item?._id !== productId
-          ),
-        }));
+        // Check if user is authenticated first
+        get().isUserAuthenticated().then(isAuthenticated => {
+          if (!isAuthenticated) {
+            return false;
+          }
+          
+          set((state: StoreState) => ({
+            favoriteProduct: state.favoriteProduct.filter(
+              (item) => item?._id !== productId
+            ),
+          }));
+          
+          // Sync with server immediately
+          setTimeout(() => {
+            get().syncWishlistWithServer().then(() => {
+              toast.success("Removed from your wishlist");
+            });
+          }, 0);
+          
+          return true;
+        });
         
-        // Sync with server immediately
-        setTimeout(() => {
-          get().syncWishlistWithServer();
-        }, 0);
-        
-        toast.success("Removed from your wishlist");
+        return false;
       },
       resetFavorite: () => {
         set({ favoriteProduct: [] });
@@ -232,14 +296,19 @@ const useStore = create<StoreState>()(
           get().syncWishlistWithServer();
         }, 0);
         
-        toast.success("Wishlist cleared");
       },
       syncWishlistWithServer: async () => {
         try {
+          // Don't attempt to sync if not authenticated
+          const isAuthenticated = await get().isUserAuthenticated();
+          if (!isAuthenticated) {
+            console.log("User not authenticated, skipping wishlist sync");
+            return { success: false, reason: "not_authenticated" };
+          }
+          
           const favoriteProducts = get().favoriteProduct;
           console.log(`Syncing wishlist with server... ${favoriteProducts.length} items`);
           
-          // Don't sync if not logged in
           const response = await fetch('/api/user-wishlist', {
             method: 'POST',
             headers: {
@@ -247,6 +316,11 @@ const useStore = create<StoreState>()(
             },
             body: JSON.stringify({ items: favoriteProducts }),
           });
+          
+          if (response.status === 401) {
+            console.log("User not authenticated, skipping wishlist sync");
+            return { success: false, reason: "not_authenticated" };
+          }
           
           if (!response.ok) {
             const errorData = await response.json();
@@ -264,8 +338,20 @@ const useStore = create<StoreState>()(
       },
       loadWishlistFromServer: async () => {
         try {
+          // Don't attempt to load if not authenticated
+          const isAuthenticated = await get().isUserAuthenticated();
+          if (!isAuthenticated) {
+            console.log("User not authenticated, skipping wishlist load");
+            return { success: false, reason: "not_authenticated" };
+          }
+          
           console.log("Loading wishlist from server...");
           const response = await fetch('/api/user-wishlist');
+          
+          if (response.status === 401) {
+            console.log("User not authenticated, skipping wishlist load");
+            return { success: false, reason: "not_authenticated" };
+          }
           
           if (response.ok) {
             const data = await response.json();
@@ -274,19 +360,30 @@ const useStore = create<StoreState>()(
             if (data.favoriteProduct && Array.isArray(data.favoriteProduct)) {
               set({ favoriteProduct: data.favoriteProduct });
               console.log("Wishlist updated in store with", data.favoriteProduct.length, "items");
+              return data.favoriteProduct;
             } else {
               console.error("Invalid wishlist data format:", data);
+              throw new Error("Invalid wishlist data format");
             }
           } else {
             const errorData = await response.json();
             console.error("Error loading wishlist from server:", errorData);
+            throw new Error(errorData.error || "Failed to load wishlist data");
           }
         } catch (error) {
           console.error("Error loading wishlist from server:", error);
+          throw error;
         }
       },
       // Reel likes implementation
       toggleReelLike: async (reelId: string) => {
+        // Check if user is authenticated first
+        const isAuthenticated = await get().isUserAuthenticated();
+        if (!isAuthenticated) {
+          toast.error("Please sign in to like reels");
+          return false;
+        }
+        
         // First update local state for immediate UI feedback
         let isNowLiked = false;
         set((state) => {

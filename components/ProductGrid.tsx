@@ -36,7 +36,7 @@ const ProductGrid = () => {
   }, [selectedTab]);
 
   return (
-    <Container className="flex flex-col lg:px-0 my-10">
+    <Container className="flex flex-col px-2 lg:px-0 my-10">
       <HomeTabbar selectedTab={selectedTab} onTabSelect={setSelectedTab} />
       {loading ? (
         <div className="flex flex-col items-center justify-center py-10 min-h-80 space-y-4 text-center bg-gray-100 rounded-lg w-full mt-10">
@@ -46,7 +46,7 @@ const ProductGrid = () => {
           </motion.div>
         </div>
       ) : products?.length ? (
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 mt-10">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 mt-4 sm:mt-10">
           <>
             {products?.map((product) => (
               <AnimatePresence key={product?._id}>

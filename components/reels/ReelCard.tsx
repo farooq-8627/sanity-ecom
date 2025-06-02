@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ProductReel } from "@/types/ProductReel";
 import { useInView } from "react-intersection-observer";
-import { PlayIcon, PauseIcon, HeartIcon, ShareIcon, Volume2Icon, VolumeXIcon } from "lucide-react";
+import { PlayIcon, PauseIcon, Heart, ShareIcon, Volume2Icon, VolumeXIcon } from "lucide-react";
 import SanityImage from "../SanityImage";
 import toast from "react-hot-toast";
 import { useUser } from "@clerk/nextjs";
@@ -28,7 +28,8 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
   });
   const { isSignedIn } = useUser();
   const { toggleReelLike, isReelLiked } = useStore();
-  const liked = isReelLiked(reel._id);
+  // Only consider a reel liked if the user is signed in and the reel is in their liked reels
+  const liked = isSignedIn && isReelLiked(reel._id);
 
   // Control video playback based on visibility
   useEffect(() => {
@@ -221,7 +222,7 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
             className={`p-2 rounded-full ${liked ? 'bg-red-500/30' : 'bg-black/20'} backdrop-blur-sm transition-all ${isLiking ? 'opacity-50' : ''}`}
             disabled={isLiking}
           >
-            <HeartIcon 
+            <Heart 
               size={24} 
               className={liked ? "text-red-500 fill-red-500" : "text-white"} 
             />

@@ -6,35 +6,61 @@ import useStore from "@/store";
 
 /**
  * StoreInitializer component
- * Loads cart data from server when a user is logged in
- * Includes retry logic to ensure data is loaded properly
+ * Loads cart and wishlist data from server when a user is logged in
  */
 export default function StoreInitializer() {
   const { isSignedIn, isLoaded, user } = useUser();
-  const { loadCartFromServer, items } = useStore();
+  const { 
+    loadCartFromServer, 
+    loadWishlistFromServer,
+    resetCart,
+    resetFavorite
+  } = useStore();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [prevAuthState, setPrevAuthState] = useState<boolean | null>(null);
+  
+  // Debug auth state
+  useEffect(() => {
+    console.log("StoreInitializer - Auth state:", { isSignedIn, isLoaded, userId: user?.id });
+    
+    // Handle logout - clear data when auth state changes from signed in to signed out
+    if (prevAuthState === true && isSignedIn === false) {
+      console.log("User logged out, clearing cart and wishlist data");
+      resetCart();
+      resetFavorite();
+    }
+    
+    // Update previous auth state
+    if (isLoaded) {
+      setPrevAuthState(isSignedIn);
+    }
+  }, [isSignedIn, isLoaded, user, resetCart, resetFavorite, prevAuthState]);
   
   useEffect(() => {
-    // Only load data when user is signed in and clerk has loaded
-    if (isLoaded && isSignedIn) {
-      console.log("StoreInitializer: Loading cart data for user", user?.id);
-      
-      // Load cart data with retry logic
-      const loadData = async () => {
+    // Only proceed when Clerk auth state is loaded and user is signed in
+    if (!isLoaded || !isSignedIn) return;
+    
+    const loadUserData = async () => {
+      if (user?.id) {
+        console.log("StoreInitializer: Loading data for user", user.id);
         try {
-          await loadCartFromServer();
+          // Load both cart and wishlist data
+          await Promise.all([
+            loadCartFromServer(),
+            loadWishlistFromServer()
+          ]);
           setIsInitialized(true);
-          console.log("Cart data loaded successfully");
+          console.log("User data loaded successfully");
         } catch (error) {
-          console.error('Error loading cart data:', error);
+          console.error('Error loading user data:', error);
           // Retry after a short delay
-          setTimeout(loadData, 1000);
+          setTimeout(loadUserData, 1000);
         }
-      };
-      
-      loadData();
-    }
-  }, [isSignedIn, isLoaded, loadCartFromServer, user?.id]);
+      }
+    };
+    
+    loadUserData();
+  }, [isSignedIn, isLoaded, user?.id, loadCartFromServer, loadWishlistFromServer]);
   
   // This component doesn't render anything
   return null;
