@@ -81,6 +81,11 @@ async function createOrderInSanity(
     { expand: ["data.price.product"] }
   );
 
+  // Fetch cart items from metadata to get size information
+  // This assumes we're storing cart items in the client-side session storage
+  // We need to retrieve the user's cart from Sanity to get size information
+  const userCart = await fetchUserCart(clerkUserId);
+
   // Create Sanity product references and prepare stock updates
   const sanityProducts = [];
   const stockUpdates = [];
@@ -90,6 +95,13 @@ async function createOrderInSanity(
 
     if (!productId) continue;
 
+    // Find size information from the user's cart
+    const cartItem = userCart?.find((cartItem: { product: { _id: string }, size?: string }) => 
+      cartItem.product._id === productId
+    );
+    
+    const size = cartItem?.size || null;
+
     sanityProducts.push({
       _key: crypto.randomUUID(),
       product: {
@@ -97,7 +109,9 @@ async function createOrderInSanity(
         _ref: productId,
       },
       quantity,
+      size, // Add size information to the order
     });
+    
     stockUpdates.push({ productId, quantity });
   }
   //   Create order in Sanity
@@ -142,6 +156,24 @@ async function createOrderInSanity(
 
   await updateStockLevels(stockUpdates);
   return order;
+}
+
+// Function to fetch user's cart from Sanity or database
+async function fetchUserCart(clerkUserId: string | undefined) {
+  if (!clerkUserId) {
+    console.warn("No clerk user ID provided for cart fetch");
+    return [];
+  }
+  
+  try {
+    // Query to fetch the user's cart from Sanity
+    const query = `*[_type == "userCart" && clerkUserId == $clerkUserId][0].items`;
+    const cart = await backendClient.fetch(query, { clerkUserId });
+    return cart || [];
+  } catch (error) {
+    console.error("Error fetching user cart:", error);
+    return [];
+  }
 }
 
 // Function to update stock levels

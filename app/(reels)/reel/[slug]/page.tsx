@@ -3,6 +3,8 @@ import { client } from "@/sanity/lib/client";
 import ReelList from "@/components/reels/ReelList";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import ReelSkeleton from "@/components/ReelSkeleton";
 
 // Query to get all reels with their associated products
 const reelsQuery = groq`*[_type == "productReel"] {
@@ -19,9 +21,12 @@ const reelsQuery = groq`*[_type == "productReel"] {
     },
     stock,
     price,
+    hasSizes,
+    sizes,
     slug {
       current
-    }
+    },
+    discount
   },
   likes,
   views,
@@ -43,9 +48,12 @@ const reelBySlugQuery = groq`*[_type == "productReel" && product->slug.current =
     },
     stock,
     price,
+    hasSizes,
+    sizes,
     slug {
       current
-    }
+    },
+    discount
   },
   likes,
   views,
@@ -71,10 +79,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-export default async function ReelPage({ params }: { params: { slug: string } }) {
-  // Properly await the params object before accessing its properties
-  const { slug } = await params;
-  
+// Component to load reel content asynchronously
+async function ReelContent({ slug }: { slug: string }) {
   const allReels = await client.fetch(reelsQuery);
   const currentReel = await client.fetch(reelBySlugQuery, { slug });
   
@@ -97,9 +103,15 @@ export default async function ReelPage({ params }: { params: { slug: string } })
     ...allReels.slice(0, currentReelIndex)
   ];
 
+  return <ReelList reels={reorderedReels} initialSlug={slug} />;
+}
+
+export default function ReelPage({ params }: { params: { slug: string } }) {
   return (
     <main className="h-full w-full">
-      <ReelList reels={reorderedReels} initialSlug={slug} />
+      <Suspense fallback={<ReelSkeleton />}>
+        <ReelContent slug={params.slug} />
+      </Suspense>
     </main>
   );
 } 

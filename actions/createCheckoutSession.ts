@@ -17,6 +17,7 @@ export interface Metadata {
 export interface GroupedCartItems {
   product: CartItem["product"];
   quantity: number;
+  size?: string;
 }
 
 function getImageUrl(image: any): string {
@@ -43,6 +44,9 @@ export async function createCheckoutSession(
     });
     const customerId = customers?.data?.length > 0 ? customers.data[0].id : "";
 
+    // Use environment variable or fallback to localhost
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    
     const sessionPayload: Stripe.Checkout.SessionCreateParams = {
       metadata: {
         orderNumber: metadata.orderNumber,
@@ -57,10 +61,8 @@ export async function createCheckoutSession(
       invoice_creation: {
         enabled: true,
       },
-      success_url: `${
-        process.env.NEXT_PUBLIC_BASE_URL
-      }/success?session_id={CHECKOUT_SESSION_ID}&orderNumber=${metadata.orderNumber}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/cart`,
+      success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}&orderNumber=${metadata.orderNumber}`,
+      cancel_url: `${baseUrl}/cart`,
       line_items: items?.map((item) => ({
         price_data: {
           currency: "USD",
@@ -68,7 +70,10 @@ export async function createCheckoutSession(
           product_data: {
             name: item?.product?.name || "Unknown Product",
             description: item?.product?.description,
-            metadata: { id: item?.product?._id },
+            metadata: { 
+              id: item?.product?._id,
+              size: item?.size || ""
+            },
             images:
               item?.product?.images && item?.product?.images?.length > 0
                 ? [getImageUrl(item?.product?.images[0])]

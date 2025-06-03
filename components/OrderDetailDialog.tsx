@@ -21,6 +21,14 @@ interface OrderDetailsDialogProps {
   onClose: () => void;
 }
 
+// Temporary type to help with TypeScript until the sanity.types.ts is regenerated
+interface OrderProduct {
+  product: any;
+  quantity?: number;
+  size?: string;
+  _key: string;
+}
+
 const OrderDetailDialog: React.FC<OrderDetailsDialogProps> = ({
   order,
   isOpen,
@@ -67,17 +75,18 @@ const OrderDetailDialog: React.FC<OrderDetailsDialogProps> = ({
           <TableHeader>
             <TableRow>
               <TableHead>Product</TableHead>
+              <TableHead>Size</TableHead>
               <TableHead>Quantity</TableHead>
               <TableHead>Price</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {order.products?.map((product, index) => (
+            {order.products?.map((item: OrderProduct, index) => (
               <TableRow key={index}>
                 <TableCell className="flex items-center gap-2">
-                  {product?.product?.images && (
+                  {item?.product?.images && (
                     <Image
-                      src={urlFor(product?.product?.images[0]).url()}
+                      src={urlFor(item?.product?.images[0]).url()}
                       alt="productImage"
                       width={50}
                       height={50}
@@ -85,12 +94,21 @@ const OrderDetailDialog: React.FC<OrderDetailsDialogProps> = ({
                     />
                   )}
 
-                  {product?.product && product?.product?.name}
+                  {item?.product && item?.product?.name}
                 </TableCell>
-                <TableCell>{product?.quantity}</TableCell>
+                <TableCell>
+                  {item?.size ? (
+                    <span className="px-2 py-1 bg-gray-100 rounded text-sm font-medium">
+                      {item.size}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400">N/A</span>
+                  )}
+                </TableCell>
+                <TableCell>{item?.quantity}</TableCell>
                 <TableCell>
                   <PriceFormatter
-                    amount={product?.product?.price}
+                    amount={item?.product?.price}
                     className="text-black font-medium"
                   />
                 </TableCell>
@@ -100,22 +118,22 @@ const OrderDetailDialog: React.FC<OrderDetailsDialogProps> = ({
         </Table>
         <div className="mt-4 text-right flex items-center justify-end">
           <div className="w-44 flex flex-col gap-1">
-            {order?.amountDiscount !== 0 && (
+            {order?.amountDiscount !== undefined && order?.amountDiscount > 0 && (
               <div className="w-full flex items-center justify-between">
                 <strong>Discount: </strong>
                 <PriceFormatter
-                  amount={order?.amountDiscount}
+                  amount={Number(order.amountDiscount) || 0}
                   className="text-black font-bold"
                 />
               </div>
             )}
-            {order?.amountDiscount !== 0 && (
+            {order?.amountDiscount !== undefined && order?.amountDiscount > 0 && (
               <div className="w-full flex items-center justify-between">
                 <strong>Subtotal: </strong>
                 <PriceFormatter
                   amount={
-                    (order?.totalPrice as number) +
-                    (order?.amountDiscount as number)
+                    Number(order?.totalPrice || 0) +
+                    Number(order?.amountDiscount || 0)
                   }
                   className="text-black font-bold"
                 />
@@ -124,7 +142,7 @@ const OrderDetailDialog: React.FC<OrderDetailsDialogProps> = ({
             <div className="w-full flex items-center justify-between">
               <strong>Total: </strong>
               <PriceFormatter
-                amount={order?.totalPrice}
+                amount={Number(order?.totalPrice || 0)}
                 className="text-black font-bold"
               />
             </div>

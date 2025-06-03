@@ -40,10 +40,10 @@ const ProductCard = ({ product }: { product: Product }) => {
           <Button
             onClick={() => router.push(`/product/${product?.slug?.current}`)}
             className={cn(
-              "w-36 rounded-full mt-4 bg-shop_dark_green/80 text-lightBg hover:bg-shop_dark_green"
+              "w-36 rounded-full mt-4 bg-shop_dark_green/80 text-white hover:bg-shop_dark_green"
             )}
           >
-            <Ruler className="mr-2 h-4 w-4" /> Select Size
+            <Ruler className="h-4 w-4" /> Select Size
           </Button>
         );
       }

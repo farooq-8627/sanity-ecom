@@ -36,6 +36,12 @@ export interface ProductReel {
       current: string;
     };
     discount?: number;
+    hasSizes?: boolean;
+    sizes?: {
+      _key: string;
+      size: string;
+      isEnabled: boolean;
+    }[];
   };
   likes: number;
   views: number;

@@ -93,11 +93,11 @@ const AddToCartButton = ({ product, selectedSize, className, disabled }: Props) 
       <Button
         disabled={true}
         className={cn(
-          "w-full bg-gray-400 text-white shadow-none border border-gray-400 font-semibold tracking-wide",
+          "w-full bg-shop_dark_green/80 text-lightBg shadow-none border border-shop_dark_green/80 font-semibold tracking-wide text-white hover:bg-shop_dark_green hover:border-shop_dark_green hoverEffect",
           className
         )}
       >
-        <Ruler className="mr-2" /> Select Size First
+        <Ruler /> Select Size First
       </Button>
     );
   }
@@ -112,7 +112,7 @@ const AddToCartButton = ({ product, selectedSize, className, disabled }: Props) 
         className
       )}
     >
-      <ShoppingBag className="mr-2" /> {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+      <ShoppingBag /> {isOutOfStock ? "Out of Stock" : "Add to Cart"}
     </Button>
   );
 };

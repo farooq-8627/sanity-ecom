@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { ProductReel } from "@/types/ProductReel";
 import ReelCard from "./ReelCard";
 import { useRouter, usePathname } from "next/navigation";
-import Image from "next/image";
 import useStore from "@/store";
 import toast from "react-hot-toast";
 import ProductImageCarousel from "../ProductImageCarousel";
@@ -13,9 +12,10 @@ import QuantityButtons from "../QuantityButtons";
 import PriceView from "../PriceView";
 import { client } from "@/sanity/lib/client";
 import { useUser } from "@clerk/nextjs";
-import ImageView from "../ImageView";
 import AddToCartButton from "../AddToCartButton";
 import FavoriteButton from "../FavoriteButton";
+import { ProductSize } from "@/sanity.types";
+import ReelListSkeliton from "../ReelListSkeliton";
 
 interface ReelListProps {
   reels: ProductReel[];
@@ -345,30 +345,73 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
                       <h2 className="text-xl font-medium mb-1">{selectedProduct.name}</h2>
                     <p className="text-gray-600 text-sm mt-3">{selectedProduct.description}</p>
                   </div>
-                  <FavoriteButton showProduct={true} product={selectedProduct} /> 
+                  <div className="flex items-center gap-2 justify-end">
+                    <FavoriteButton showProduct={true} product={selectedProduct} />
+                  </div>
                 </div>
 
-                {/* Price Display */}
-                <div className="mb-4">
+                {/* Price Display with Stock Status */}
+                <div className="flex items-center gap-3 mb-4">
                   <PriceView 
                     price={selectedProduct.price} 
                     discount={selectedProduct.discount}
                     className="text-2xl font-bold"
                   />
-                </div>
-
-                {/* Quantity Selector */}
-                <div className="flex items-center gap-4 mb-4">
-                  <span className="text-sm text-gray-600">Quantity:</span>
-                  <QuantityButtons product={selectedProduct} />
-                </div>
-
-                {/* Stock Status */}
-                <div className="mb-6">
                   <span className={`px-2 py-1 rounded text-sm ${selectedProduct.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {selectedProduct.stock > 0 ? 'In Stock' : 'Out of Stock'}
                   </span>
                 </div>
+
+                {/* Quantity Selector - Only show for products without sizes */}
+                {!selectedProduct.hasSizes && (
+                  <div className="flex items-center gap-4 mb-4">
+                    <span className="text-sm text-gray-600">Quantity:</span>
+                    <QuantityButtons product={selectedProduct} />
+                  </div>
+                )}
+
+                {/* Size Selection - Only show if product has sizes */}
+                {selectedProduct.hasSizes && selectedProduct.sizes && selectedProduct.sizes.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProduct.sizes
+                        .filter((size: ProductSize) => size.isEnabled)
+                        .map((sizeObj: ProductSize) => {
+                          const isSelected = items.some(
+                            item => 
+                              item.product._id === selectedProduct._id && 
+                              item.size === sizeObj.size
+                          );
+                          
+                          return (
+                            <button
+                              key={sizeObj._key}
+                              onClick={() => {
+                                // Remove existing items with this product but different size
+                                const existingItem = items.find(
+                                  item => item.product._id === selectedProduct._id
+                                );
+                                
+                                if (existingItem && existingItem.size !== sizeObj.size) {
+                                  useStore.getState().deleteCartProduct(selectedProduct._id, existingItem.size);
+                                }
+                                
+                                // Add item with selected size
+                                addItem(selectedProduct, sizeObj.size);
+                              }}
+                              className={`min-w-[48px] h-10 flex items-center justify-center rounded border text-sm font-medium ${
+                                isSelected
+                                  ? "border-gray-900 bg-gray-900 text-white"
+                                  : "border-gray-200 text-gray-900 hover:border-gray-900"
+                              }`}
+                            >
+                              {sizeObj.size}
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 <div className="mt-auto flex items-center gap-2">
@@ -384,16 +427,7 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
               </div>
             </div>
           ) : (
-            <div className="h-full flex flex-col items-center justify-center text-gray-500">
-              <div className="text-center p-8">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-4">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 16v-4M12 8h.01" />
-                </svg>
-                <h3 className="text-lg font-medium mb-2">Select a product</h3>
-                <p className="text-sm">Click on a product in the reels to view details</p>
-            </div>
-          </div>
+            <ReelListSkeliton />
         )}
       </div>
       )}

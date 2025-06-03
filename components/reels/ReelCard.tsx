@@ -3,10 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ProductReel } from "@/types/ProductReel";
 import { useInView } from "react-intersection-observer";
-import { PlayIcon, PauseIcon, Heart, Volume2Icon, VolumeXIcon } from "lucide-react";
-import { LiaTelegramPlane } from "react-icons/lia";
-import { FaWhatsapp, FaFacebookF, FaTwitter, FaTelegram } from "react-icons/fa";
-import { MdContentCopy, MdClose } from "react-icons/md";
+import { PlayIcon, Heart, Volume2Icon, VolumeXIcon } from "lucide-react";
 import SanityImage from "../SanityImage";
 import toast from "react-hot-toast";
 import { useUser } from "@clerk/nextjs";
