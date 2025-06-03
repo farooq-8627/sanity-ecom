@@ -2,40 +2,62 @@
 import { Product } from "@/sanity.types";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, Ruler } from "lucide-react";
 import useStore from "@/store";
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { SignInButton } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 interface Props {
   product: Product;
+  selectedSize?: string;
   className?: string;
+  disabled?: boolean;
 }
 
-const AddToCartButton = ({ product, className }: Props) => {
+const AddToCartButton = ({ product, selectedSize, className, disabled }: Props) => {
   const { addItem, getItemCount } = useStore();
   const { isSignedIn, isLoaded } = useUser();
-  const [isCheckingAuth, setIsCheckingAuth] = useState(false);
-  const itemCount = getItemCount(product?._id);
+  const itemCount = getItemCount(product?._id, selectedSize);
   const isOutOfStock = product?.stock === 0;
   const router = useRouter();
 
-  const handleAddToCart = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (!isLoaded || !isSignedIn) return;
+  // Check if any size of this product is already in the cart
+  const isAnyVariantInCart = useStore((state) => 
+    state.items.some(item => item.product._id === product._id)
+  );
 
-    setIsCheckingAuth(true);
+  const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!isLoaded || !isSignedIn) return;
     
-    if ((product?.stock as number) > itemCount) {
-      addItem(product);
+    if (product.hasSizes && !selectedSize) {
+      toast.error("Please select a size");
+      return;
     }
-    
-    setIsCheckingAuth(false);
+
+    addItem(product, selectedSize);
   };
   
-  // Show view cart button if item is in cart
-  if (itemCount && isSignedIn) {
+  // Show view cart button if this specific item is in cart
+  if (itemCount > 0 && isSignedIn) {
+    return (
+      <Button
+        onClick={() => router.push('/cart')}
+        className={cn(
+          "w-full bg-shop_light_green text-white hover:bg-shop_dark_green transition-colors",
+          className
+        )}
+      >
+        <ShoppingBag className="mr-2" /> View Cart
+      </Button>
+    );
+  }
+  
+  // Also show view cart button if any variant of this product is in cart
+  // and we're on a product page with sizes (not a listing page)
+  if (isAnyVariantInCart && product.hasSizes && isSignedIn) {
     return (
       <Button
         onClick={() => router.push('/cart')}
@@ -64,12 +86,27 @@ const AddToCartButton = ({ product, className }: Props) => {
       </SignInButton>
     );
   }
+
+  // For products with sizes but no size selected yet
+  if (product.hasSizes && !selectedSize) {
+    return (
+      <Button
+        disabled={true}
+        className={cn(
+          "w-full bg-gray-400 text-white shadow-none border border-gray-400 font-semibold tracking-wide",
+          className
+        )}
+      >
+        <Ruler className="mr-2" /> Select Size First
+      </Button>
+    );
+  }
   
   // Show regular add to cart button if user is authenticated
   return (
     <Button
       onClick={handleAddToCart}
-      disabled={isOutOfStock || isCheckingAuth}
+      disabled={isOutOfStock || disabled}
       className={cn(
         "w-full bg-shop_dark_green/80 text-lightBg shadow-none border border-shop_dark_green/80 font-semibold tracking-wide text-white hover:bg-shop_dark_green hover:border-shop_dark_green hoverEffect",
         className

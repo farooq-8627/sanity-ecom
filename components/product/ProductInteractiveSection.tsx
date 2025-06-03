@@ -5,12 +5,13 @@ import FavoriteButton from "@/components/FavoriteButton";
 import PriceView from "@/components/PriceView";
 import ShareButton from "@/components/ShareButton";
 import { StarIcon } from "lucide-react";
-import React from "react";
+import React, { useState } from "react";
 import QuantityButtons from "@/components/QuantityButtons";
 import useStore from "@/store";
 import { useUser } from "@clerk/nextjs";
 import PriceFormatter from "@/components/PriceFormatter";
 import AddToCartButton from "@/components/AddToCartButton";
+import { cn } from "@/lib/utils";
 
 interface ProductInteractiveSectionProps {
   product: Product;
@@ -19,12 +20,18 @@ interface ProductInteractiveSectionProps {
 const ProductInteractiveSection = ({ product }: ProductInteractiveSectionProps) => {
   const { getItemCount } = useStore();
   const { isSignedIn } = useUser();
-  const itemCount = getItemCount(product?._id);
+  const [selectedSize, setSelectedSize] = useState<string>("");
+  const itemCount = getItemCount(product?._id, selectedSize);
   const productSlug = product?.slug?.current;
 
   if (!productSlug || !product.name) {
     return null;
   }
+
+  // Get available sizes (enabled only)
+  const availableSizes = product.hasSizes && product.sizes
+    ? product.sizes.filter((size) => size.isEnabled)
+    : [];
 
   return (
     <div className="flex flex-col gap-3">
@@ -64,10 +71,23 @@ const ProductInteractiveSection = ({ product }: ProductInteractiveSectionProps) 
           discount={product?.discount}
           className="text-xl font-bold"
         />
-        <p className={`px-2 py-1 text-sm font-medium rounded-md ${
-          product?.stock === 0 ? "bg-red-100 text-red-600" : "text-green-600 bg-green-50"
-        }`}>
-          {(product?.stock as number) > 0 ? "In Stock" : "Out of Stock"}
+        <p className={cn(
+          "px-2 py-1 text-sm font-medium rounded-md",
+          product.hasSizes
+            ? selectedSize
+              ? "text-green-600 bg-green-50"
+              : "bg-yellow-100 text-yellow-800"
+            : (product.stock === 0
+              ? "bg-red-100 text-red-600"
+              : "text-green-600 bg-green-50")
+        )}>
+          {product.hasSizes
+            ? selectedSize
+              ? "Selected Size Available"
+              : "Please Select Size"
+            : (product.stock as number) > 0
+              ? "In Stock"
+              : "Out of Stock"}
         </p>
       </div>
 
@@ -76,20 +96,28 @@ const ProductInteractiveSection = ({ product }: ProductInteractiveSectionProps) 
         <p>{product?.description}</p>
       </div>
 
-      {/* Size Selection */}
-      <div className="space-y-2">
-        <div className="flex gap-2">
-          {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((size) => (
-            <button
-              key={size}
-              onClick={() => {}}
-              className="min-w-[48px] h-10 flex items-center justify-center rounded border text-sm font-medium border-gray-200 text-gray-900 hover:border-gray-900"
-            >
-              {size}
-            </button>
-          ))}
+      {/* Size Selection - Only show if product has sizes */}
+      {product.hasSizes && availableSizes.length > 0 && (
+        <div className="space-y-2">
+          <span className="text-sm font-medium text-gray-700">Select Size</span>
+          <div className="flex gap-2">
+            {availableSizes.map((sizeObj) => (
+              <button
+                key={sizeObj._key}
+                onClick={() => setSelectedSize(sizeObj.size)}
+                className={cn(
+                  "min-w-[48px] h-10 flex items-center justify-center rounded border text-sm font-medium",
+                  selectedSize === sizeObj.size
+                    ? "border-gray-900 bg-gray-900 text-white"
+                    : "border-gray-200 text-gray-900 hover:border-gray-900"
+                )}
+              >
+                {sizeObj.size}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Cart Section */}
       <div className="w-full space-y-4">
@@ -99,7 +127,7 @@ const ProductInteractiveSection = ({ product }: ProductInteractiveSectionProps) 
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-600">Quantity</span>
-                <QuantityButtons product={product} />
+                <QuantityButtons product={product} selectedSize={selectedSize} />
               </div>
               <PriceFormatter
                 amount={product?.price ? product?.price * itemCount : 0}
@@ -110,7 +138,12 @@ const ProductInteractiveSection = ({ product }: ProductInteractiveSectionProps) 
         )}
         
         {/* Add to Cart Button */}
-        <AddToCartButton product={product} className="w-full" />
+        <AddToCartButton 
+          product={product} 
+          className="w-full" 
+          selectedSize={selectedSize}
+          disabled={product.hasSizes && !selectedSize}
+        />
       </div>
     </div>
   );

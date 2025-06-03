@@ -226,6 +226,7 @@ export type Order = {
       [internalGroqTypeReferenceTo]?: "product";
     };
     quantity?: number;
+    size?: string;
     _key: string;
   }>;
   totalPrice?: number;
@@ -241,6 +242,12 @@ export type Order = {
   status?: "pending" | "processing" | "paid" | "shipped" | "out_for_delivery" | "delivered" | "cancelled";
   orderDate?: string;
 };
+
+export interface ProductSize {
+  _key: string;
+  size: string;
+  isEnabled: boolean;
+}
 
 export type Product = {
   _id: string;
@@ -284,6 +291,8 @@ export type Product = {
     description?: string;
   };
   isFeatured?: boolean;
+  hasSizes?: boolean;
+  sizes?: ProductSize[];
 };
 
 export type Brand = {

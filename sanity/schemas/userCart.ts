@@ -6,11 +6,10 @@ export default defineType({
   type: 'document',
   fields: [
     defineField({
-      name: 'userId',
-      title: 'User ID',
+      name: 'clerkUserId',
+      title: 'Clerk User ID',
       type: 'string',
-      description: 'Clerk user ID',
-      validation: (Rule) => Rule.required()
+      validation: (Rule: any) => Rule.required(),
     }),
     defineField({
       name: 'items',
@@ -21,34 +20,37 @@ export default defineType({
           type: 'object',
           fields: [
             defineField({
-              name: 'productId',
-              title: 'Product ID',
-              type: 'string',
-              validation: (Rule) => Rule.required()
+              name: 'product',
+              title: 'Product',
+              type: 'reference',
+              to: [{ type: 'product' }],
+              validation: (Rule: any) => Rule.required(),
             }),
             defineField({
               name: 'quantity',
               title: 'Quantity',
               type: 'number',
-              validation: (Rule) => Rule.required().min(1)
+              validation: (Rule: any) => Rule.required().min(1),
             }),
             defineField({
-              name: 'addedAt',
-              title: 'Added At',
-              type: 'datetime',
-              initialValue: () => new Date().toISOString()
-            })
+              name: 'size',
+              title: 'Size',
+              type: 'string',
+              description: 'Selected size for the product (if applicable)',
+            }),
           ],
           preview: {
             select: {
-              productId: 'productId',
+              productName: 'product.name',
               quantity: 'quantity',
-              addedAt: 'addedAt'
+              size: 'size',
+              productImage: 'product.images.0'
             },
-            prepare({ productId, quantity, addedAt }) {
+            prepare({ productName, quantity, size, productImage }) {
               return {
-                title: `Product: ${productId || 'Unknown'}`,
-                subtitle: `Qty: ${quantity || 0} - Added: ${addedAt ? new Date(addedAt).toLocaleString() : 'Unknown'}`
+                title: productName || 'Unknown Product',
+                subtitle: `Qty: ${quantity || 0}${size ? ` - Size: ${size}` : ''}`,
+                media: productImage
               };
             }
           }
@@ -64,13 +66,15 @@ export default defineType({
   ],
   preview: {
     select: {
-      title: 'userId'
+      title: 'clerkUserId',
+      subtitle: 'updatedAt',
+      items: 'items'
     },
-    prepare(selection) {
-      const { title } = selection;
+    prepare({ title, subtitle, items }: { title: string; subtitle: string; items: any[] }) {
       return {
-        title: `Cart: ${title || 'Unknown User'}`
+        title: `Cart: ${title}`,
+        subtitle: `${items?.length || 0} items - Last updated: ${new Date(subtitle).toLocaleString()}`,
       };
-    }
+    },
   }
 }); 

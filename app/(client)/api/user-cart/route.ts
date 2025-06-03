@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { client } from "@/sanity/lib/client";
 import { backendClient } from "@/sanity/lib/backendClient";
+import { CartItem } from "@/store";
 
 // Get user cart
 export async function GET(req: Request) {
@@ -20,14 +21,31 @@ export async function GET(req: Request) {
     
     // Check if user has a cart in Sanity
     const userCart = await client.fetch(
-      `*[_type == "userCart" && userId == $userId][0]{
+      `*[_type == "userCart" && clerkUserId == $userId][0]{
         _id,
-        userId,
+        clerkUserId,
         items[] {
           _key,
-          productId,
+          product->{
+            _id,
+            _type,
+            name,
+            slug,
+            images,
+            description,
+            price,
+            discount,
+            categories,
+            stock,
+            brand,
+            status,
+            variant,
+            isFeatured,
+            hasSizes,
+            sizes
+          },
           quantity,
-          addedAt
+          size
         }
       }`,
       { userId }
@@ -41,28 +59,8 @@ export async function GET(req: Request) {
     
     console.log("Found cart with", userCart.items?.length || 0, "items for user", userId);
     
-    // Get product details for each item in cart
-    const cartWithProducts = await Promise.all(
-      (userCart.items || []).map(async (item: any) => {
-        const product = await client.fetch(
-          `*[_type == "product" && _id == $productId][0]`,
-          { productId: item.productId }
-        );
-        
-        if (!product) {
-          console.log(`Product not found for ID: ${item.productId}`);
-          return null;
-        }
-        
-        return {
-          product,
-          quantity: item.quantity
-        };
-      })
-    );
-    
-    // Filter out any null products (in case a product was deleted)
-    const validCartItems = cartWithProducts.filter(item => item !== null);
+    // Cart items already have product references expanded
+    const validCartItems = (userCart.items || []).filter((item: { product: any }) => item.product);
     
     console.log("Returning", validCartItems.length, "valid products for cart of user", userId);
     
@@ -91,7 +89,7 @@ export async function POST(req: Request) {
     
     // Get cart items from request
     const body = await req.json();
-    console.log(`Received cart update request for user ${userId}:`, body);
+    console.log(`Received cart update request for user ${userId}`);
     
     const { items } = body;
     
@@ -119,34 +117,41 @@ export async function POST(req: Request) {
     
     try {
       // Format cart items for Sanity with _key property
-      const sanityCartItems = items.map((item: any, index: number) => {
+      const sanityCartItems = items.map((item: CartItem, index: number) => {
         if (!item || !item.product || !item.product._id) {
           console.error("Invalid item in cart items:", item);
           throw new Error("Invalid item data in cart items");
         }
         
+        // Generate a unique key that includes size information if available
+        const sizeInfo = item.size ? `_${item.size}` : '';
+        const uniqueKey = `${item.product._id}${sizeInfo}_${index}`;
+        
         return {
-          _key: `${item.product._id}_${Date.now()}_${index}`,
-          productId: item.product._id,
+          _key: uniqueKey,
+          product: {
+            _type: "reference",
+            _ref: item.product._id
+          },
           quantity: item.quantity,
-          addedAt: new Date().toISOString()
+          size: item.size || undefined
         };
       });
       
       console.log(`Formatted ${sanityCartItems.length} cart items for user ${userId}`);
       
-      // Check if user already has a cart
-      const existingCart = await client.fetch(
-        `*[_type == "userCart" && userId == $userId][0]`,
+      // Check if user already has a cart - just get the ID
+      const existingCartId = await client.fetch(
+        `*[_type == "userCart" && clerkUserId == $userId][0]._id`,
         { userId }
       );
       
-      if (existingCart) {
-        console.log(`Updating existing cart for user ${userId}:`, existingCart._id);
+      if (existingCartId) {
+        console.log(`Updating existing cart for user ${userId}:`, existingCartId);
         
         // Update existing cart
         const result = await backendClient
-          .patch(existingCart._id)
+          .patch(existingCartId)
           .set({ 
             items: sanityCartItems,
             updatedAt: new Date().toISOString()
@@ -166,7 +171,7 @@ export async function POST(req: Request) {
         // Create new cart
         const result = await backendClient.create({
           _type: 'userCart',
-          userId,
+          clerkUserId: userId,
           items: sanityCartItems,
           updatedAt: new Date().toISOString()
         });

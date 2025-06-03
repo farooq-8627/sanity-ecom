@@ -1,3 +1,5 @@
+"use client";
+
 import { Product } from "@/sanity.types";
 import useStore from "@/store";
 import React from "react";
@@ -8,29 +10,33 @@ import toast from "react-hot-toast";
 
 interface Props {
   product: Product;
+  selectedSize?: string;
   className?: string;
 }
-const QuantityButtons = ({ product, className }: Props) => {
+
+const QuantityButtons = ({ product, selectedSize, className }: Props) => {
   const { addItem, removeItem, getItemCount } = useStore();
-  const itemCount = getItemCount(product?._id);
+  const itemCount = getItemCount(product?._id, selectedSize);
   const isOutOfStock = product?.stock === 0;
 
   const handleRemoveProduct = () => {
-    removeItem(product?._id);
-    if (itemCount > 1) {
-      toast.success("Quantity Decreased successfully!");
-    } else {
-      toast.success(`${product?.name?.substring(0, 12)} removed successfully!`);
+    if (product.hasSizes && !selectedSize) {
+      toast.error("Please select a size");
+      return;
     }
+    
+    removeItem(product?._id, selectedSize);
+    // Toast is handled by the store
   };
 
   const handleAddToCart = () => {
-    if ((product?.stock as number) > itemCount) {
-      addItem(product);
-      toast.success("Quantity Increased successfully!");
-    } else {
-      toast.error("Can not add more than available stock");
+    if (product.hasSizes && !selectedSize) {
+      toast.error("Please select a size");
+      return;
     }
+
+    addItem(product, selectedSize);
+    // Toast is handled by the store
   };
 
   return (
@@ -51,7 +57,7 @@ const QuantityButtons = ({ product, className }: Props) => {
         onClick={handleAddToCart}
         variant="outline"
         size="icon"
-        disabled={isOutOfStock}
+        disabled={product.hasSizes && !selectedSize}
         className="w-6 h-6 border-[1px] hover:bg-shop_dark_green/20 hoverEffect"
       >
         <Plus />

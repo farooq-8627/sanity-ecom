@@ -43,6 +43,7 @@ const CartPage = () => {
     getItemCount,
     getSubTotalPrice,
     resetCart,
+    loadCartFromServer
   } = useStore();
   const [loading, setLoading] = useState(false);
   const groupedItems = useStore((state) => state.getGroupedItems());
@@ -69,9 +70,18 @@ const CartPage = () => {
       setLoading(false);
     }
   };
+  
   useEffect(() => {
     fetchAddresses();
-  }, []);
+    
+    // Load cart data when component mounts
+    if (isSignedIn) {
+      loadCartFromServer().catch(error => 
+        console.error("Failed to load cart data:", error)
+      );
+    }
+  }, [isSignedIn, loadCartFromServer]);
+  
   const handleResetCart = () => {
     const confirmed = window.confirm(
       "Are you sure you want to reset your cart?"
@@ -102,6 +112,7 @@ const CartPage = () => {
       setLoading(false);
     }
   };
+  
   return (
     <div className="bg-gray-50 pb-52 md:pb-10">
       {isSignedIn ? (
@@ -115,11 +126,10 @@ const CartPage = () => {
               <div className="grid lg:grid-cols-3 md:gap-8">
                 <div className="lg:col-span-2 rounded-lg">
                   <div className="border bg-white rounded-md">
-                    {groupedItems?.map(({ product }) => {
-                      const itemCount = getItemCount(product?._id);
+                    {groupedItems?.map(({ product, size, quantity }) => {
                       return (
                         <div
-                          key={product?._id}
+                          key={`${product?._id}-${size || 'default'}`}
                           className="border-b p-2.5 last:border-b-0 flex items-center justify-between gap-5"
                         >
                           <div className="flex flex-1 items-start gap-2 h-36 md:h-44">
@@ -153,9 +163,37 @@ const CartPage = () => {
                                 <p className="text-sm capitalize">
                                   Status:{" "}
                                   <span className="font-semibold">
-                                    {product?.status}
+                                    {product?.status || "Standard"}
                                   </span>
                                 </p>
+                                
+                                {/* Show size information if product has sizes */}
+                                {product.hasSizes && (
+                                  <div className="mt-1">
+                                    <p className="text-sm mb-1">Size: <span className="font-semibold">{size || "Not selected"}</span></p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {product.sizes?.filter(s => s.isEnabled).map((sizeObj) => (
+                                        <button
+                                          key={sizeObj._key}
+                                          onClick={() => {
+                                            // Remove current item
+                                            deleteCartProduct(product._id, size);
+                                            // Add with new size
+                                            useStore.getState().addItem(product, sizeObj.size);
+                                            toast.success(`Size updated to ${sizeObj.size}`);
+                                          }}
+                                          className={`px-2 py-0.5 text-xs border rounded ${
+                                            size === sizeObj.size
+                                              ? "border-gray-900 bg-gray-900 text-white"
+                                              : "border-gray-200 text-gray-900"
+                                          }`}
+                                        >
+                                          {sizeObj.size}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                               <div className="flex items-center gap-2">
                                 <TooltipProvider>
@@ -174,10 +212,8 @@ const CartPage = () => {
                                     <TooltipTrigger>
                                       <Trash
                                         onClick={() => {
-                                          deleteCartProduct(product?._id);
-                                          toast.success(
-                                            "Product deleted successfully!"
-                                          );
+                                          deleteCartProduct(product?._id, size);
+                                          // Toast is handled by the store
                                         }}
                                         className="w-4 h-4 md:w-5 md:h-5 mr-1 text-gray-500 hover:text-red-600 hoverEffect"
                                       />
@@ -192,10 +228,13 @@ const CartPage = () => {
                           </div>
                           <div className="flex flex-col items-start justify-between h-36 md:h-44 p-0.5 md:p-1">
                             <PriceFormatter
-                              amount={(product?.price as number) * itemCount}
+                              amount={(product?.price as number) * quantity}
                               className="font-bold text-lg"
                             />
-                            <QuantityButtons product={product} />
+                            <QuantityButtons 
+                              product={product} 
+                              selectedSize={size}
+                            />
                           </div>
                         </div>
                       );
@@ -204,6 +243,7 @@ const CartPage = () => {
                       onClick={handleResetCart}
                       className="m-5 font-semibold"
                       variant="destructive"
+                      disabled={loading}
                     >
                       Reset Cart
                     </Button>

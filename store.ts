@@ -6,20 +6,21 @@ import toast from "react-hot-toast";
 export interface CartItem {
   product: Product;
   quantity: number;
+  size?: string;
 }
 
 interface StoreState {
   items: CartItem[];
-  addItem: (product: Product) => void;
-  removeItem: (productId: string) => void;
-  deleteCartProduct: (productId: string) => void;
+  addItem: (product: Product, size?: string) => void;
+  removeItem: (productId: string, size?: string) => void;
+  deleteCartProduct: (productId: string, size?: string) => void;
   resetCart: () => void;
   getTotalPrice: () => number;
   getSubTotalPrice: () => number;
-  getItemCount: (productId: string) => number;
+  getItemCount: (productId: string, size?: string) => number;
   getGroupedItems: () => CartItem[];
-  syncCartWithServer: () => Promise<void>;
-  loadCartFromServer: () => Promise<void>;
+  syncCartWithServer: () => Promise<any>;
+  loadCartFromServer: () => Promise<any>;
   //   // favorite
   favoriteProduct: Product[];
   addToFavorite: (product: Product) => Promise<boolean>;
@@ -58,67 +59,119 @@ const useStore = create<StoreState>()(
           return false;
         }
       },
-      addItem: (product) => {
+      addItem: (product, size) => {
+        // Update local state immediately for instant UI feedback
         set((state) => {
+          // For products with sizes, we need to check if the same product with the same size exists
           const existingItem = state.items.find(
-            (item) => item.product._id === product._id
+            (item) => 
+              item.product._id === product._id && 
+              (product.hasSizes ? item.size === size : true)
           );
+          
           if (existingItem) {
+            // Item exists, just increase quantity
+            toast.success("Quantity Increased");
             return {
               items: state.items.map((item) =>
-                item.product._id === product._id
+                item.product._id === product._id && 
+                (product.hasSizes ? item.size === size : true)
                   ? { ...item, quantity: item.quantity + 1 }
                   : item
               ),
             };
           } else {
-            return { items: [...state.items, { product, quantity: 1 }] };
+            // New item being added
+            const sizeText = size ? ` (${size})` : '';
+            toast.success(`${product?.name?.substring(0, 12)}${sizeText} added to cart`);
+            return { 
+              items: [...state.items, { 
+                product, 
+                quantity: 1, 
+                size: product.hasSizes ? size : undefined 
+              }] 
+            };
           }
         });
-        toast.success(`${product?.name?.substring(0, 12)}... added to cart`);
-        // Sync with server after updating local state
-        setTimeout(() => {
-          get().syncCartWithServer();
-        }, 0);
+        
+        // Sync with server in the background
+        get().syncCartWithServer().catch(error => {
+          console.error("Failed to sync cart after adding item:", error);
+        });
       },
-      removeItem: (productId) => {
-        set((state) => ({
-          items: state.items.reduce((acc, item) => {
-            if (item.product._id === productId) {
-              if (item.quantity > 1) {
-                acc.push({ ...item, quantity: item.quantity - 1 });
+      removeItem: (productId, size) => {
+        // Update local state immediately for instant UI feedback
+        set((state) => {
+          const itemToRemove = state.items.find(
+            item => item.product._id === productId && 
+              (item.product.hasSizes ? item.size === size : true)
+          );
+          
+          // If item exists and quantity is 1, it will be removed
+          const willBeRemoved = itemToRemove && itemToRemove.quantity === 1;
+          
+          if (willBeRemoved) {
+            toast.success(`${itemToRemove.product.name?.substring(0, 12)} removed`);
+          } else if (itemToRemove) {
+            toast.success("Quantity Decreased");
+          }
+          
+          return {
+            items: state.items.reduce((acc, item) => {
+              const isSameItem = item.product._id === productId && 
+                (item.product.hasSizes ? item.size === size : true);
+              
+              if (isSameItem) {
+                if (item.quantity > 1) {
+                  acc.push({ ...item, quantity: item.quantity - 1 });
+                }
+              } else {
+                acc.push(item);
               }
-            } else {
-              acc.push(item);
-            }
-            return acc;
-          }, [] as CartItem[]),
-        }));
+              return acc;
+            }, [] as CartItem[]),
+          };
+        });
         
-        // Sync with server after updating local state
-        setTimeout(() => {
-          get().syncCartWithServer();
-        }, 0);
+        // Sync with server in the background
+        get().syncCartWithServer().catch(error => {
+          console.error("Failed to sync cart after removing item:", error);
+        });
       },
-      deleteCartProduct: (productId) => {
-        set((state) => ({
-          items: state.items.filter(
-            ({ product }) => product?._id !== productId
-          ),
-        }));
+      deleteCartProduct: (productId, size) => {
+        // Update local state immediately for instant UI feedback
+        set((state) => {
+          const itemToDelete = state.items.find(
+            item => item.product._id === productId && 
+              (item.product.hasSizes ? item.size === size : true)
+          );
+          
+          if (itemToDelete) {
+            toast.success(`${itemToDelete.product.name?.substring(0, 12)} removed from cart`);
+          }
+          
+          return {
+            items: state.items.filter(
+              (item) => 
+                !(item.product._id === productId && 
+                  (item.product.hasSizes ? item.size === size : true))
+            ),
+          };
+        });
         
-        // Sync with server after updating local state
-        setTimeout(() => {
-          get().syncCartWithServer();
-        }, 0);
+        // Sync with server in the background
+        get().syncCartWithServer().catch(error => {
+          console.error("Failed to sync cart after deleting product:", error);
+        });
       },
       resetCart: () => {
+        // Update local state immediately for instant UI feedback
         set({ items: [] });
         
-        // Sync with server
-        setTimeout(() => {
-          get().syncCartWithServer();
-        }, 0);
+        // Sync with server in the background
+        get().syncCartWithServer().catch(error => {
+          console.error("Failed to sync cart after reset:", error);
+        });
       },
       getTotalPrice: () => {
         return get().items.reduce(
@@ -134,11 +187,20 @@ const useStore = create<StoreState>()(
           return total + discountedPrice * item.quantity;
         }, 0);
       },
-      getItemCount: (productId) => {
-        const item = get().items.find((item) => item.product._id === productId);
+      getItemCount: (productId, size) => {
+        if (!productId) return 0;
+        
+        const item = get().items.find((item) => 
+          item.product._id === productId && 
+          (item.product.hasSizes ? item.size === size : true)
+        );
+        
         return item ? item.quantity : 0;
       },
-      getGroupedItems: () => get().items,
+      getGroupedItems: () => {
+        // Return items with quantity directly
+        return get().items;
+      },
       syncCartWithServer: async () => {
         try {
           // Don't attempt to sync if not authenticated
@@ -154,6 +216,7 @@ const useStore = create<StoreState>()(
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Cache-Control': 'no-cache',
             },
             body: JSON.stringify({ items: get().items }),
           });
@@ -187,7 +250,11 @@ const useStore = create<StoreState>()(
           }
           
           console.log("Loading cart data from server...");
-          const response = await fetch('/api/user-cart');
+          const response = await fetch('/api/user-cart', {
+            headers: {
+              'Cache-Control': 'no-cache',
+            }
+          });
           
           if (response.status === 401) {
             console.log("User not authenticated, skipping cart load");

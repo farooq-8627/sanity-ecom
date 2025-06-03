@@ -4,13 +4,57 @@ import Image from "next/image";
 import React from "react";
 import Link from "next/link";
 import { StarIcon } from "@sanity/icons";
-import { Flame, Tag, Percent } from "lucide-react";
+import { Flame, Tag, Percent, Ruler } from "lucide-react";
 import PriceView from "./PriceView";
 import Title from "./Title";
 import ProductSideMenu from "./ProductSideMenu";
 import AddToCartButton from "./AddToCartButton";
+import { Button } from "./ui/button";
+import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import useStore from "@/store";
 
 const ProductCard = ({ product }: { product: Product }) => {
+  const router = useRouter();
+  const isAnyVariantInCart = useStore((state) => 
+    state.items.some(item => item.product._id === product._id)
+  );
+
+  // Render different button based on whether product has sizes
+  const renderActionButton = () => {
+    if (product.hasSizes) {
+      // For products with sizes, show either "View Cart" or "Select Size" button
+      if (isAnyVariantInCart) {
+        return (
+          <Button
+            onClick={() => router.push('/cart')}
+            className={cn(
+              "w-36 rounded-full mt-4 bg-shop_light_green text-white hover:bg-shop_dark_green transition-colors"
+            )}
+          >
+            View Cart
+          </Button>
+        );
+      } else {
+        return (
+          <Button
+            onClick={() => router.push(`/product/${product?.slug?.current}`)}
+            className={cn(
+              "w-36 rounded-full mt-4 bg-shop_dark_green/80 text-lightBg hover:bg-shop_dark_green"
+            )}
+          >
+            <Ruler className="mr-2 h-4 w-4" /> Select Size
+          </Button>
+        );
+      }
+    } else {
+      // For products without sizes, use the normal AddToCartButton
+      return (
+        <AddToCartButton product={product} className="w-36 rounded-full mt-4" />
+      );
+    }
+  };
+
   return (
     <div className="text-sm border-[1px] rounded-md border-darkBlue/20 group bg-white">
       <div className="relative group overflow-hidden bg-shop_light_bg">
@@ -56,6 +100,15 @@ const ProductCard = ({ product }: { product: Product }) => {
             </div>
           </div>
         ) : null}
+        
+        {/* Size indicator for products with sizes */}
+        {product.hasSizes && (
+          <div className="absolute top-2 right-10 z-10">
+            <div className="rounded-full bg-gray-800/70 p-1 backdrop-blur-sm">
+              <Ruler size={16} className="text-white" />
+            </div>
+          </div>
+        )}
       </div>
       <div className="p-3 flex flex-col gap-1">
         <div className="flex justify-between">
@@ -95,7 +148,8 @@ const ProductCard = ({ product }: { product: Product }) => {
           discount={product?.discount}
           className="text-sm"
         />
-        <AddToCartButton product={product} className="w-36 rounded-full mt-4" />
+        
+        {renderActionButton()}
       </div>
     </div>
   );

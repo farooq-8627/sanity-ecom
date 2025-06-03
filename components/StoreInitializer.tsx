@@ -28,6 +28,7 @@ export default function StoreInitializer() {
       console.log("User logged out, clearing cart and wishlist data");
       resetCart();
       resetFavorite();
+      setIsInitialized(false);
     }
     
     // Update previous auth state
@@ -38,29 +39,30 @@ export default function StoreInitializer() {
   
   useEffect(() => {
     // Only proceed when Clerk auth state is loaded and user is signed in
-    if (!isLoaded || !isSignedIn) return;
+    if (!isLoaded || !isSignedIn || isInitialized) return;
     
     const loadUserData = async () => {
       if (user?.id) {
         console.log("StoreInitializer: Loading data for user", user.id);
         try {
-          // Load both cart and wishlist data
+          // Load cart and wishlist data in parallel
           await Promise.all([
             loadCartFromServer(),
             loadWishlistFromServer()
           ]);
-          setIsInitialized(true);
+          
           console.log("User data loaded successfully");
+          setIsInitialized(true);
         } catch (error) {
           console.error('Error loading user data:', error);
-          // Retry after a short delay
-          setTimeout(loadUserData, 1000);
+          // Even if there's an error, consider it initialized to avoid repeated retries
+          setIsInitialized(true);
         }
       }
     };
     
     loadUserData();
-  }, [isSignedIn, isLoaded, user?.id, loadCartFromServer, loadWishlistFromServer]);
+  }, [isSignedIn, isLoaded, user?.id, loadCartFromServer, loadWishlistFromServer, isInitialized]);
   
   // This component doesn't render anything
   return null;
