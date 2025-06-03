@@ -13,6 +13,9 @@ import QuantityButtons from "../QuantityButtons";
 import PriceView from "../PriceView";
 import { client } from "@/sanity/lib/client";
 import { useUser } from "@clerk/nextjs";
+import ImageView from "../ImageView";
+import AddToCartButton from "../AddToCartButton";
+import FavoriteButton from "../FavoriteButton";
 
 interface ReelListProps {
   reels: ProductReel[];
@@ -117,19 +120,19 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
     if (isMobile) {
       const selectedReel = reels.find(reel => reel.product._id === productId);
       if (selectedReel?.product?.slug?.current) {
-        router.push(`/product/${selectedReel.product.slug.current}`);
+        // Reset scroll position before navigation
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.style.overflow = 'hidden';
+          window.scrollTo(0, 0);
+        }
+        
+        // Use setTimeout to ensure scroll reset happens before navigation
+        setTimeout(() => {
+          router.push(`/product/${selectedReel.product.slug.current}`);
+        }, 0);
       }
     } else {
       setSelectedProductId(productId);
-    }
-  };
-
-  const handleAddToCart = (product: any) => {
-    if (product.stock > 0) {
-      addItem(product);
-      toast.success(`${product.name.substring(0, 12)}... added successfully!`);
-    } else {
-      toast.error("Cannot add out of stock items");
     }
   };
 
@@ -158,14 +161,35 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
       }, { passive: false });
     }
 
+    // Cleanup function to reset scroll behavior
     return () => {
       if (scrollContainer) {
         scrollContainer.removeEventListener('touchmove', (e) => {
           e.stopPropagation();
         });
+        scrollContainer.style.overflow = '';
       }
+      document.body.style.overflow = '';
     };
   }, []);
+
+  // Handle scroll position on mount and unmount
+  useEffect(() => {
+    // Save current scroll position
+    const savedScrollPosition = window.scrollY;
+    
+    // Reset scroll on mount
+    window.scrollTo(0, 0);
+    document.body.style.overflow = 'hidden';
+    
+    return () => {
+      // Restore scroll position and behavior on unmount
+      document.body.style.overflow = '';
+      if (!isMobile) {
+        window.scrollTo(0, savedScrollPosition);
+      }
+    };
+  }, [isMobile]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     // Avoid processing scroll events while programmatic scrolling is happening
@@ -213,9 +237,6 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
     }
   };
 
-  const handleToggleMute = (muted: boolean) => {
-    setGlobalMuted(muted);
-  };
 
   // Sync likes with backend when component mounts
   useEffect(() => {
@@ -284,8 +305,6 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
                 reel={reel} 
                 onProductOpen={handleProductOpen}
                 isPressed={pressedReelId === reel._id}
-                  globalMuted={globalMuted}
-                  onToggleMute={handleToggleMute}
               />
               </div>
             </div>
@@ -310,7 +329,7 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
         <div className="hidden md:block md:w-[40%] p-4 overflow-y-auto border-l border-gray-100">
           {selectedProduct ? (
           <div className="bg-white rounded-lg p-4">
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 h-1/2">
                 {/* Product Images */}
                 <div>
                 <ProductImageCarousel 
@@ -324,20 +343,9 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
                 <div className="flex items-start justify-between gap-4 mb-3">
                     <div>
                       <h2 className="text-xl font-medium mb-1">{selectedProduct.name}</h2>
-                    <p className="text-gray-600 text-sm line-clamp-2">{selectedProduct.description}</p>
+                    <p className="text-gray-600 text-sm mt-3">{selectedProduct.description}</p>
                   </div>
-                  <button 
-                    onClick={() => handleAddToWishlist(selectedProduct)}
-                      className={`p-1.5 hover:bg-gray-50 rounded-full ${
-                      favoriteProduct.some(item => item._id === selectedProduct._id)
-                        ? "text-shop_light_green"
-                        : ""
-                    }`}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill={favoriteProduct.some(item => item._id === selectedProduct._id) ? "#3b9c3c" : "none"} viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
-                    </svg>
-                  </button>
+                  <FavoriteButton showProduct={true} product={selectedProduct} /> 
                 </div>
 
                 {/* Price Display */}
@@ -364,22 +372,7 @@ export default function ReelList({ reels, initialSlug }: ReelListProps) {
 
                 {/* Action Buttons */}
                 <div className="mt-auto flex items-center gap-2">
-                  {isInCart(selectedProduct._id) ? (
-                    <button
-                      onClick={() => router.push('/cart')}
-                      className="flex-1 py-2 px-3 bg-shop_light_green text-white text-sm rounded-lg hover:bg-shop_dark_green transition-colors"
-                    >
-                      View Cart
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleAddToCart(selectedProduct)}
-                      className="flex-1 py-2 px-3 bg-black text-white text-sm rounded-lg hover:bg-black/90 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                      disabled={selectedProduct.stock === 0}
-                    >
-                      {selectedProduct.stock === 0 ? "Out of Stock" : "Add to Cart"}
-                    </button>
-                  )}
+                    <AddToCartButton product={selectedProduct} className="flex-1" />
                   <button
                     onClick={() => selectedProduct.slug.current && router.push(`/product/${selectedProduct.slug.current}`)}
                     className="py-2 px-3 text-sm text-gray-600 hover:text-gray-900"

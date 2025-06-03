@@ -10,35 +10,40 @@ export default function ProductImageCarousel({ images, title }: ProductImageCaro
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {/* Main Image */}
-      <div className="relative w-[250px] h-[250px] rounded-lg overflow-hidden">
-        <Image
-          src={images[currentImageIndex]?.url || ''}
-          alt={`${title} - Image ${currentImageIndex + 1}`}
-          fill
-          className="object-cover"
-        />
-      </div>
-
-      {/* Thumbnail Strip */}
-      <div className="flex gap-1.5">
+    <div className="w-full flex flex-col md:flex-row ">
+      {/* Thumbnails - Left Side */}
+      <div className="order-2 md:order-1 flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:w-20 md:max-h-[500px]">
         {images.map((image, index) => (
           <button
             key={index}
             onClick={() => setCurrentImageIndex(index)}
-            className={`relative w-12 h-12 flex-shrink-0 rounded overflow-hidden border transition-all ${
-              currentImageIndex === index ? 'border-black' : 'border-gray-200'
+            className={`flex-shrink-0 w-12 h-12 md:w-18 md:h-18 border rounded-lg overflow-hidden ${
+              currentImageIndex === index ? 'border-shop_orange' : 'border-gray-100 hover:border-gray-200'
             }`}
           >
             <Image
               src={image.url}
               alt={`${title} - Thumbnail ${index + 1}`}
-              fill
-              className="object-cover"
+              width={80}
+              height={80}
+              className="w-full h-full object-cover"
             />
           </button>
         ))}
+      </div>
+
+      {/* Main Image - Right Side */}
+      <div className="order-1 md:order-2 flex-1">
+        <div className="w-full h-[400px] border border-gray-100 rounded-lg overflow-hidden">
+          <Image
+            src={images[currentImageIndex]?.url || ''}
+            alt={`${title} - Image ${currentImageIndex + 1}`}
+            width={800}
+            height={800}
+            priority
+            className="w-full h-full object-contain hover:scale-105 transition-transform duration-300"
+          />
+        </div>
       </div>
     </div>
   );

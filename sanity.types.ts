@@ -274,13 +274,15 @@ export type Product = {
   }>;
   stock?: number;
   brand?: {
-    _ref: string;
-    _type: "reference";
-    _weak?: boolean;
-    [internalGroqTypeReferenceTo]?: "brand";
+    title?: string;
+    description?: string;
   };
   status?: "new" | "hot" | "sale";
-  variant?: "gadget" | "appliances" | "refrigerators" | "others";
+  variant?: {
+    title?: string;
+    value?: string;
+    description?: string;
+  };
   isFeatured?: boolean;
 };
 

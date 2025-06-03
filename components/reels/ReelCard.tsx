@@ -3,21 +3,23 @@
 import { useState, useRef, useEffect } from "react";
 import { ProductReel } from "@/types/ProductReel";
 import { useInView } from "react-intersection-observer";
-import { PlayIcon, PauseIcon, Heart, ShareIcon, Volume2Icon, VolumeXIcon } from "lucide-react";
+import { PlayIcon, PauseIcon, Heart, Volume2Icon, VolumeXIcon } from "lucide-react";
+import { LiaTelegramPlane } from "react-icons/lia";
+import { FaWhatsapp, FaFacebookF, FaTwitter, FaTelegram } from "react-icons/fa";
+import { MdContentCopy, MdClose } from "react-icons/md";
 import SanityImage from "../SanityImage";
 import toast from "react-hot-toast";
 import { useUser } from "@clerk/nextjs";
 import useStore from "@/store";
+import ShareButton from "../ShareButton";
 
 interface ReelCardProps {
   reel: ProductReel;
   onProductOpen: (productId: string) => void;
   isPressed?: boolean;
-  globalMuted: boolean;
-  onToggleMute: (muted: boolean) => void;
 }
 
-export default function ReelCard({ reel, onProductOpen, isPressed = false, globalMuted, onToggleMute }: ReelCardProps) {
+export default function ReelCard({ reel, onProductOpen, isPressed = false }: ReelCardProps) {
   const [playing, setPlaying] = useState(false);
   const [likesCount, setLikesCount] = useState(reel.likes || 0);
   const [isLiking, setIsLiking] = useState(false);
@@ -27,8 +29,7 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
     threshold: 0.7,
   });
   const { isSignedIn } = useUser();
-  const { toggleReelLike, isReelLiked } = useStore();
-  // Only consider a reel liked if the user is signed in and the reel is in their liked reels
+  const { toggleReelLike, isReelLiked, globalMuted, setGlobalMuted } = useStore();
   const liked = isSignedIn && isReelLiked(reel._id);
 
   // Control video playback based on visibility
@@ -57,13 +58,6 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
     }
   }, [inView]);
 
-  // Update video mute status when globalMuted changes
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.muted = globalMuted;
-    }
-  }, [globalMuted]);
-
   // Play/pause based on user interaction
   const togglePlayback = () => {
     if (videoRef.current) {
@@ -78,8 +72,7 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Update the global mute state
-    onToggleMute(!globalMuted);
+    setGlobalMuted(!globalMuted);
   };
 
   const handleLike = async (e: React.MouseEvent) => {
@@ -105,7 +98,7 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
         // Revert optimistic update if failed
         setLikesCount(reel.likes || 0);
         toast.error("Failed to update like status");
-    }
+      }
     } catch (error) {
       console.error("Error liking reel:", error);
       // Revert optimistic update
@@ -123,23 +116,6 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
     } finally {
       setIsLiking(false);
     }
-  };
-
-  const handleShare = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    
-    // Get the current URL
-    const currentUrl = window.location.href;
-    
-    // Copy to clipboard
-    navigator.clipboard.writeText(currentUrl)
-      .then(() => {
-        toast.success("Reel URL copied to clipboard!");
-      })
-      .catch((error) => {
-        console.error("Failed to copy URL: ", error);
-        toast.error("Failed to copy URL");
-      });
   };
 
   return (
@@ -197,43 +173,41 @@ export default function ReelCard({ reel, onProductOpen, isPressed = false, globa
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex-shrink-0">
               {reel.product.images?.[0] && (
-              <SanityImage
+                <SanityImage
                   image={reel.product.images[0]}
-                alt={reel.product.name || 'Product image'}
-                width={48}
-                height={48}
-                className="object-cover w-full h-full"
-              />
+                  alt={reel.product.name || 'Product image'}
+                  width={48}
+                  height={48}
+                  className="object-cover w-full h-full"
+                />
               )}
             </div>
             <div className="flex-1">
               <h3 className="text-white text-sm font-medium mb-0.5 drop-shadow-sm line-clamp-1">{reel.product.name}</h3>
-              {/* <button className="bg-white/80 backdrop-blur-sm text-black px-4 py-1 rounded-full text-xs font-medium">
-                View Product
-              </button> */}
             </div>
           </div>
         </div>
 
         {/* Interaction Buttons */}
-        <div className="absolute right-4 bottom-24 flex flex-col gap-4 pointer-events-auto">
+        <div className="absolute right-4 bottom-24 flex flex-col gap-3 pointer-events-auto">
           <button 
             onClick={handleLike}
-            className={`p-2 rounded-full ${liked ? 'bg-red-500/30' : 'bg-black/20'} backdrop-blur-sm transition-all ${isLiking ? 'opacity-50' : ''}`}
+            className={`transition-all ${isLiking ? 'opacity-50' : ''}`}
             disabled={isLiking}
           >
             <Heart 
-              size={24} 
-              className={liked ? "text-red-500 fill-red-500" : "text-white"} 
+              size={26} 
+              className={`transition-colors ${liked ? "text-red-500 fill-red-500" : "text-white"}`} 
             />
-            <span className="text-xs text-white block mt-1">{likesCount}</span>
+            <span className="text-[10px] text-white block mt-0.5">{likesCount}</span>
           </button>
-          <button 
-            onClick={handleShare}
-            className="p-2 rounded-full bg-black/20 backdrop-blur-sm"
-          >
-            <ShareIcon size={24} className="text-white" />
-          </button>
+          <ShareButton 
+            title={reel.product.name}
+            description={`Check out this product: ${reel.product.name}`}
+            url={`/reel/${reel.product.slug.current}`}
+            iconOnly
+            className="text-white"
+          />
         </div>
       </div>
     </div>

@@ -4,11 +4,10 @@ import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 import { ShoppingBag } from "lucide-react";
 import useStore from "@/store";
-import PriceFormatter from "./PriceFormatter";
-import QuantityButtons from "./QuantityButtons";
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { SignInButton } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 
 interface Props {
   product: Product;
@@ -21,6 +20,7 @@ const AddToCartButton = ({ product, className }: Props) => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(false);
   const itemCount = getItemCount(product?._id);
   const isOutOfStock = product?.stock === 0;
+  const router = useRouter();
 
   const handleAddToCart = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!isLoaded || !isSignedIn) return;
@@ -34,21 +34,18 @@ const AddToCartButton = ({ product, className }: Props) => {
     setIsCheckingAuth(false);
   };
   
-  // Show quantity controls if item is in cart
+  // Show view cart button if item is in cart
   if (itemCount && isSignedIn) {
     return (
-      <div className="text-sm w-full">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-darkColor/80">Quantity</span>
-          <QuantityButtons product={product} />
-        </div>
-        <div className="flex items-center justify-between border-t pt-1">
-          <span className="text-xs font-semibold">Subtotal</span>
-          <PriceFormatter
-            amount={product?.price ? product?.price * itemCount : 0}
-          />
-        </div>
-      </div>
+      <Button
+        onClick={() => router.push('/cart')}
+        className={cn(
+          "w-full bg-shop_light_green text-white hover:bg-shop_dark_green transition-colors",
+          className
+        )}
+      >
+        <ShoppingBag className="mr-2" /> View Cart
+      </Button>
     );
   }
   
@@ -62,7 +59,7 @@ const AddToCartButton = ({ product, className }: Props) => {
             className
           )}
         >
-          <ShoppingBag /> {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+          <ShoppingBag className="mr-2" /> {isOutOfStock ? "Out of Stock" : "Add to Cart"}
         </Button>
       </SignInButton>
     );
@@ -78,7 +75,7 @@ const AddToCartButton = ({ product, className }: Props) => {
         className
       )}
     >
-      <ShoppingBag /> {isOutOfStock ? "Out of Stock" : "Add to Cart"}
+      <ShoppingBag className="mr-2" /> {isOutOfStock ? "Out of Stock" : "Add to Cart"}
     </Button>
   );
 };

@@ -18,7 +18,27 @@ const DEAL_PRODUCTS = defineQuery(
 );
 
 const PRODUCT_BY_SLUG_QUERY = defineQuery(
-  `*[_type == "product" && slug.current == $slug] | order(name asc) [0]`
+  `*[_type == "product" && slug.current == $slug] | order(name asc) [0] {
+    ...,
+    "variant": variant->{
+      title,
+      value,
+      description
+    },
+    "brand": brand->{
+      title,
+      description
+    }
+  }`
+);
+
+const REEL_BY_PRODUCT_SLUG_QUERY = defineQuery(
+  `*[_type == "productReel" && product->slug.current == $slug][0] {
+    _id,
+    video {
+      "url": asset->url
+    }
+  }`
 );
 
 const BRAND_QUERY = defineQuery(`*[_type == "product" && slug.current == $slug]{
@@ -92,4 +112,5 @@ export {
   SINGLE_BLOG_QUERY,
   BLOG_CATEGORIES,
   OTHERS_BLOG_QUERY,
+  REEL_BY_PRODUCT_SLUG_QUERY,
 };

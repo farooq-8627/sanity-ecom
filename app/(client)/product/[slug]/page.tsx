@@ -1,114 +1,154 @@
-import AddToCartButton from "@/components/AddToCartButton";
-import Container from "@/components/Container";
-import FavoriteButton from "@/components/FavoriteButton";
-import ImageView from "@/components/ImageView";
-import PriceView from "@/components/PriceView";
-import ProductCharacteristics from "@/components/ProductCharacteristics";
-import { getProductBySlug } from "@/sanity/queries";
-import { CornerDownLeft, StarIcon, Truck } from "lucide-react";
+import { getProductBySlug, getReelByProductSlug } from "@/sanity/queries";
 import { notFound } from "next/navigation";
-import React from "react";
-import { FaRegQuestionCircle } from "react-icons/fa";
-import { FiShare2 } from "react-icons/fi";
-import { RxBorderSplit } from "react-icons/rx";
-import { TbTruckDelivery } from "react-icons/tb";
+import { Metadata } from "next";
+import Container from "@/components/Container";
+import ImageView from "@/components/ImageView";
+import ProductVideo from "@/components/ProductVideo";
+import { Video } from "lucide-react";
+import ProductCharacteristics from "@/components/ProductCharacteristics";
+import DeliveryInfo from "@/components/product/DeliveryInfo";
+import ProductInteractiveSection from "@/components/product/ProductInteractiveSection";
 
-const SingleProductPage = async ({
-  params,
-}: {
+interface Props {
   params: Promise<{ slug: string }>;
-}) => {
+}
+
+// Generate metadata for SEO
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
+
+  if (!product) {
+    return {
+      title: 'Product Not Found',
+    };
+  }
+
+  return {
+    title: product.name,
+    description: product.description,
+    openGraph: {
+      title: product.name,
+      description: product.description,
+      images: product.images?.[0] ? [{ url: product.images[0].url }] : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: product.name,
+      description: product.description,
+      images: product.images?.[0] ? [product.images[0].url] : [],
+    },
+  };
+}
+
+// Server Component
+export default async function SingleProductPage({ params }: Props) {
+  const { slug } = await params;
+  const product = await getProductBySlug(slug);
+  const productReel = await getReelByProductSlug(slug);
+  
   if (!product) {
     return notFound();
   }
-  return (
-    <Container className="flex flex-col md:flex-row gap-10 py-10">
-      {product?.images && (
-        <ImageView images={product?.images} isStock={product?.stock} />
-      )}
-      <div className="w-full md:w-1/2 flex flex-col gap-5">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold">{product?.name}</h2>
-          <p className="text-sm text-gray-600 tracking-wide">
-            {product?.description}
-          </p>
-          <div className="flex items-center gap-0.5 text-xs">
-            {[...Array(5)].map((_, index) => (
-              <StarIcon
-                key={index}
-                size={12}
-                className="text-shop_light_green"
-                fill={"#3b9c3c"}
-              />
-            ))}
-            <p className="font-semibold">{`(120)`}</p>
-          </div>
-        </div>
-        <div className="space-y-2 border-t border-b border-gray-200 py-5">
-          <PriceView
-            price={product?.price}
-            discount={product?.discount}
-            className="text-lg font-bold"
-          />
-          <p
-            className={`px-4 py-1.5 text-sm text-center inline-block font-semibold rounded-lg ${product?.stock === 0 ? "bg-red-100 text-red-600" : "text-green-600 bg-green-100"}`}
-          >
-            {(product?.stock as number) > 0 ? "In Stock" : "Out of Stock"}
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5 lg:gap-3">
-          <AddToCartButton product={product} />
-          <FavoriteButton showProduct={true} product={product} />
-        </div>
-        <ProductCharacteristics product={product} />
-        <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-b-gray-200 py-5 -mt-2">
-          <div className="flex items-center gap-2 text-sm text-black hover:text-red-600 hoverEffect">
-            <RxBorderSplit className="text-lg" />
-            <p>Compare color</p>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-black hover:text-red-600 hoverEffect">
-            <FaRegQuestionCircle className="text-lg" />
-            <p>Ask a question</p>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-black hover:text-red-600 hoverEffect">
-            <TbTruckDelivery className="text-lg" />
-            <p>Delivery & Return</p>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-black hover:text-red-600 hoverEffect">
-            <FiShare2 className="text-lg" />
-            <p>Share</p>
-          </div>
-        </div>
-        <div className="flex flex-col">
-          <div className="border border-lightColor/25 border-b-0 p-3 flex items-center gap-2.5">
-            <Truck size={30} className="text-shop_orange" />
-            <div>
-              <p className="text-base font-semibold text-black">
-                Free Delivery
-              </p>
-              <p className="text-sm text-gray-500 underline underline-offset-2">
-                Enter your Postal code for Delivey Availability.
-              </p>
-            </div>
-          </div>
-          <div className="border border-lightColor/25 p-3 flex items-center gap-2.5">
-            <CornerDownLeft size={30} className="text-shop_orange" />
-            <div>
-              <p className="text-base font-semibold text-black">
-                Return Delivery
-              </p>
-              <p className="text-sm text-gray-500 ">
-                Free 30days Delivery Returns.{" "}
-                <span className="underline underline-offset-2">Details</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Container>
-  );
-};
 
-export default SingleProductPage;
+  const productSlug = product.slug?.current;
+  if (!productSlug || !product.name) {
+    return notFound();
+  }
+
+  return (
+    <>
+      {/* Schema.org structured data for rich results */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: product.name,
+            description: product.description,
+            image: product.images?.[0]?.url,
+            offers: {
+              "@type": "Offer",
+              price: product.price,
+              priceCurrency: "USD",
+              availability: product.stock > 0 ? "InStock" : "OutOfStock",
+            },
+          }),
+        }}
+      />
+
+      <div className="bg-white py-3 md:py-2">
+        <Container>
+          <div className="flex flex-col gap-8">
+            {/* Media Section */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              {/* Main Product Image */}
+              <div className="md:col-span-9">
+                {product.images && (
+                  <ImageView images={product.images} isStock={product.stock} />
+                )}
+              </div>
+              
+              {/* Product Video - Desktop */}
+              {productReel && productReel.video && (
+                <div className="hidden md:block md:col-span-3">
+                  <div className="h-[500px] border border-gray-100 rounded-lg overflow-hidden">
+                    <ProductVideo 
+                      videoUrl={productReel.video.url} 
+                      className="h-full w-full object-cover"
+                      productSlug={productSlug}
+                      fullHeight={true}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Product Video - Mobile */}
+            {productReel && productReel.video && (
+              <div className="md:hidden">
+                <div className="relative bg-gray-50 rounded-lg overflow-hidden">
+                  <div className="aspect-video w-full">
+                    <ProductVideo 
+                      videoUrl={productReel.video.url} 
+                      className="w-full h-full object-cover"
+                      productSlug={productSlug}
+                      fullHeight={false}
+                    />
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <div className="text-center text-white">
+                      <Video size={32} className="mx-auto mb-2" />
+                      <p className="text-sm font-medium">Watch Product Video</p>
+                      <p className="text-xs opacity-80">See it in action</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Product Info Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Main Info - Left Column */}
+              <div className="lg:col-span-8">
+                <ProductInteractiveSection product={product} />
+              </div>
+
+              {/* Additional Info - Right Column */}
+              <div className="lg:col-span-4">
+                <div className="space-y-3">
+                  {/* Characteristics Card */}
+                  <ProductCharacteristics product={product}/>
+
+                  {/* Delivery & Returns */}
+                  <DeliveryInfo />
+                </div>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </div>
+    </>
+  );
+}

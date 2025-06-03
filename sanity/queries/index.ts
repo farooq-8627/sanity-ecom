@@ -9,6 +9,7 @@ import {
   MY_ORDERS_QUERY,
   OTHERS_BLOG_QUERY,
   PRODUCT_BY_SLUG_QUERY,
+  REEL_BY_PRODUCT_SLUG_QUERY,
   SINGLE_BLOG_QUERY,
 } from "./query";
 
@@ -151,6 +152,22 @@ const getOthersBlog = async (slug: string, quantity: number) => {
     return [];
   }
 };
+
+const getReelByProductSlug = async (slug: string) => {
+  try {
+    const reel = await sanityFetch({
+      query: REEL_BY_PRODUCT_SLUG_QUERY,
+      params: {
+        slug,
+      },
+    });
+    return reel?.data || null;
+  } catch (error) {
+    console.error("Error fetching reel by product slug:", error);
+    return null;
+  }
+};
+
 export {
   getCategories,
   getAllBrands,
@@ -163,4 +180,5 @@ export {
   getSingleBlog,
   getBlogCategories,
   getOthersBlog,
+  getReelByProductSlug,
 };

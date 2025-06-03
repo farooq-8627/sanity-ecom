@@ -31,6 +31,9 @@ interface StoreState {
   likedReels: string[];
   toggleReelLike: (reelId: string) => Promise<boolean>;
   isReelLiked: (reelId: string) => boolean;
+  // Global video mute state
+  globalMuted: boolean;
+  setGlobalMuted: (muted: boolean) => void;
   // Auth check
   isUserAuthenticated: () => Promise<boolean>;
 }
@@ -41,6 +44,8 @@ const useStore = create<StoreState>()(
       items: [],
       favoriteProduct: [],
       likedReels: [],
+      globalMuted: true,
+      setGlobalMuted: (muted: boolean) => set({ globalMuted: muted }),
       isUserAuthenticated: async () => {
         try {
           // Make a request to an API endpoint that requires authentication
@@ -70,12 +75,10 @@ const useStore = create<StoreState>()(
             return { items: [...state.items, { product, quantity: 1 }] };
           }
         });
-        
+        toast.success(`${product?.name?.substring(0, 12)}... added to cart`);
         // Sync with server after updating local state
         setTimeout(() => {
-          get().syncCartWithServer().then(() => {
-            toast.success(`${product?.name?.substring(0, 12)}... added to cart`);
-          });
+          get().syncCartWithServer();
         }, 0);
       },
       removeItem: (productId) => {
