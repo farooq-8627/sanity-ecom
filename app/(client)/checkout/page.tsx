@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import Container from "@/components/Container";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, CreditCard, Wallet } from "lucide-react";
 import AddressSelector from "@/components/address/AddressSelector";
 import { UserAddress } from "@/sanity.types";
 import useStore from "@/store";
@@ -15,12 +15,15 @@ import { v4 as uuidv4 } from "uuid";
 import { GroupedCartItems, createCheckoutSession, Metadata, AddressInfo } from "@/actions/createCheckoutSession";
 import { Product } from "@/sanity.types";
 import CheckoutSkeleton from "@/components/skeletons/CheckoutSkeleton";
+import toast from "react-hot-toast";
 
 interface CartItem {
   product: Product;
   quantity: number;
   size?: string;
 }
+
+type PaymentMethod = 'cod' | 'prepaid';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -31,6 +34,8 @@ export default function CheckoutPage() {
   const [selectedAddress, setSelectedAddress] = useState<UserAddress | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('prepaid');
+  const resetCart = useStore((state) => state.resetCart);
 
   useEffect(() => {
     // Redirect to cart if cart is empty
@@ -42,6 +47,54 @@ export default function CheckoutPage() {
   const handleSelectAddress = (address: UserAddress | null) => {
     setSelectedAddress(address);
     setError(null); // Clear any previous errors
+  };
+
+  const createCodOrder = async () => {
+    try {
+      const orderData = {
+        orderNumber: `ORD-${Date.now()}-${uuidv4().substring(0, 6)}`,
+        customerName: user?.fullName ?? selectedAddress?.fullName ?? "Unknown",
+        customerEmail: user?.primaryEmailAddress?.emailAddress ?? "Unknown",
+        clerkUserId: user?.id,
+        address: {
+          name: selectedAddress?.fullName ?? "",
+          address: selectedAddress?.addressLine1 ?? "",
+          addressLine2: selectedAddress?.addressLine2 ?? "",
+          city: selectedAddress?.city ?? "",
+          state: selectedAddress?.state ?? "",
+          zip: selectedAddress?.pincode ?? "",
+          phoneNumber: selectedAddress?.phoneNumber ?? "",
+        },
+        items: groupedItems.map(item => ({
+          product: item.product,
+          quantity: item.quantity,
+          size: item.size,
+        })),
+        totalAmount: subtotal,
+        paymentStatus: "cod",
+        orderStatus: "pending"
+      };
+
+      const response = await fetch('/api/orders/cod', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create COD order');
+      }
+
+      const { orderId } = await response.json();
+      resetCart();
+      router.push(`/success?order_id=${orderId}&payment_method=cod`);
+    } catch (error) {
+      console.error('Error creating COD order:', error);
+      setError("Failed to create order. Please try again.");
+      setIsProcessing(false);
+    }
   };
 
   const handleCheckout = async () => {
@@ -59,14 +112,18 @@ export default function CheckoutPage() {
     setError(null);
 
     try {
-      // Format items for checkout session
+      if (paymentMethod === 'cod') {
+        await createCodOrder();
+        return;
+      }
+
+      // Handle prepaid payment through Stripe
       const checkoutItems = groupedItems.map((item: CartItem): GroupedCartItems => ({
         product: item.product,
         quantity: item.quantity,
         size: item.size,
       }));
 
-      // Create metadata for the order
       const metadata: Metadata = {
         orderNumber: `ORD-${Date.now()}-${uuidv4().substring(0, 6)}`,
         customerName: user.fullName ?? selectedAddress.fullName ?? "Unknown",
@@ -83,7 +140,6 @@ export default function CheckoutPage() {
         } as AddressInfo,
       };
 
-      // Create checkout session
       const checkoutUrl = await createCheckoutSession(checkoutItems, metadata);
       
       if (checkoutUrl) {
@@ -123,6 +179,56 @@ export default function CheckoutPage() {
                 onSelectAddress={handleSelectAddress}
                 selectedAddressId={selectedAddress?._id}
               />
+            </div>
+
+            {/* Payment Method Selection */}
+            <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
+              <h2 className="text-xl font-semibold mb-4">Payment Method</h2>
+              <div className="space-y-3">
+                <button
+                  onClick={() => setPaymentMethod('prepaid')}
+                  className={`w-full flex items-center justify-between p-4 rounded-lg border ${
+                    paymentMethod === 'prepaid' 
+                      ? 'border-shop_dark_green bg-shop_dark_green/5' 
+                      : 'border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <CreditCard className={paymentMethod === 'prepaid' ? 'text-shop_dark_green' : 'text-gray-500'} />
+                    <div className="text-left">
+                      <p className="font-medium">Pay Online</p>
+                      <p className="text-sm text-gray-500">Pay securely with credit/debit card</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center w-6 h-6 border-2 rounded-full border-gray-300">
+                    {paymentMethod === 'prepaid' && (
+                      <div className="w-3 h-3 bg-shop_dark_green rounded-full" />
+                    )}
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setPaymentMethod('cod')}
+                  className={`w-full flex items-center justify-between p-4 rounded-lg border ${
+                    paymentMethod === 'cod' 
+                      ? 'border-shop_dark_green bg-shop_dark_green/5' 
+                      : 'border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Wallet className={paymentMethod === 'cod' ? 'text-shop_dark_green' : 'text-gray-500'} />
+                    <div className="text-left">
+                      <p className="font-medium">Cash on Delivery</p>
+                      <p className="text-sm text-gray-500">Pay when you receive your order</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center w-6 h-6 border-2 rounded-full border-gray-300">
+                    {paymentMethod === 'cod' && (
+                      <div className="w-3 h-3 bg-shop_dark_green rounded-full" />
+                    )}
+                  </div>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -181,7 +287,7 @@ export default function CheckoutPage() {
                     Processing...
                   </>
                 ) : (
-                  'Proceed to Payment'
+                  paymentMethod === 'cod' ? 'Place Order' : 'Proceed to Payment'
                 )}
               </Button>
 

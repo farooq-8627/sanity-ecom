@@ -12,6 +12,7 @@ import {
   REEL_BY_PRODUCT_SLUG_QUERY,
   SINGLE_BLOG_QUERY,
 } from "./query";
+import { groq } from "next-sanity";
 
 const getCategories = async (quantity?: number) => {
   try {
@@ -91,18 +92,6 @@ const getBrand = async (slug: string) => {
     return null;
   }
 };
-const getMyOrders = async (userId: string) => {
-  try {
-    const orders = await sanityFetch({
-      query: MY_ORDERS_QUERY,
-      params: { userId },
-    });
-    return orders?.data || null;
-  } catch (error) {
-    console.error("Error fetching product by ID:", error);
-    return null;
-  }
-};
 const getAllBlogs = async (quantity: number) => {
   try {
     const { data } = await sanityFetch({
@@ -168,6 +157,19 @@ const getReelByProductSlug = async (slug: string) => {
   }
 };
 
+export const getMyOrders = async (userId: string) => {
+  try {
+    const orders = await sanityFetch({
+      query: MY_ORDERS_QUERY,
+      params: { userId },
+    });
+    return orders?.data || null;
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return null;
+  }
+};
+
 export {
   getCategories,
   getAllBrands,
@@ -175,7 +177,6 @@ export {
   getDealProducts,
   getProductBySlug,
   getBrand,
-  getMyOrders,
   getAllBlogs,
   getSingleBlog,
   getBlogCategories,

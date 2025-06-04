@@ -3,7 +3,7 @@ import OrdersComponent from "@/components/OrdersComponent";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Table, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table } from "@/components/ui/table";
 import { getMyOrders } from "@/sanity/queries";
 import { auth } from "@clerk/nextjs/server";
 import { FileX } from "lucide-react";
@@ -30,26 +30,6 @@ const OrdersPage = async () => {
             <CardContent>
               <ScrollArea>
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px] md:w-auto">
-                        Order Number
-                      </TableHead>
-                      <TableHead className="hidden md:table-cell">
-                        Date
-                      </TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead className="hidden sm:table-cell">
-                        Email
-                      </TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="hidden sm:table-cell">
-                        Invoice Number
-                      </TableHead>
-                      <TableHead className="text-center">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
                   <OrdersComponent orders={orders} />
                 </Table>
                 <ScrollBar orientation="horizontal" />

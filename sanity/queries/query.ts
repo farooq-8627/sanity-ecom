@@ -43,16 +43,22 @@ const REEL_BY_PRODUCT_SLUG_QUERY = defineQuery(
 
 const BRAND_QUERY = defineQuery(`*[_type == "product" && slug.current == $slug]{
   "brandName": brand->title
-  }`);
-
-const MY_ORDERS_QUERY =
-  defineQuery(`*[_type == 'order' && clerkUserId == $userId] | order(orderDate desc){
-...,products[]{
-  product->,
-  quantity,
-  size
-}
 }`);
+
+const MY_ORDERS_QUERY = defineQuery(`*[_type == 'order' && customer.clerkUserId == $userId] | order(createdAt desc) {
+  ...,
+  items[] {
+    ...,
+    product-> {
+      _id,
+      name,
+      images,
+      price,
+      slug
+    }
+  }
+}`);
+
 const GET_ALL_BLOG = defineQuery(
   `*[_type == 'blog'] | order(publishedAt desc)[0...$quantity]{
   ...,  
@@ -63,8 +69,8 @@ const GET_ALL_BLOG = defineQuery(
   `
 );
 
-const SINGLE_BLOG_QUERY =
-  defineQuery(`*[_type == "blog" && slug.current == $slug][0]{
+const SINGLE_BLOG_QUERY = defineQuery(
+  `*[_type == "blog" && slug.current == $slug][0]{
   ..., 
     author->{
     name,
@@ -74,7 +80,8 @@ const SINGLE_BLOG_QUERY =
     title,
     "slug": slug.current,
   },
-}`);
+}`
+);
 
 const BLOG_CATEGORIES = defineQuery(
   `*[_type == "blog"]{
@@ -103,6 +110,7 @@ const OTHERS_BLOG_QUERY = defineQuery(`*[
     "slug": slug.current,
   }
 }`);
+
 export {
   BRANDS_QUERY,
   LATEST_BLOG_QUERY,
