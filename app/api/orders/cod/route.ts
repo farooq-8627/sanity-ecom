@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { backendClient } from "@/sanity/lib/backendClient";
-import { nanoid } from 'nanoid';
+import crypto from 'crypto';
+
+const generateKey = () => crypto.randomBytes(16).toString('hex');
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,50 +18,85 @@ export async function POST(req: NextRequest) {
 
     const orderData = await req.json();
 
-    // Create order in Sanity with the updated schema
-    const order = await backendClient.create({
+    // Validate required fields
+    if (!orderData.customerName || !orderData.address || !orderData.items || !orderData.totalAmount) {
+      return NextResponse.json(
+        { error: "Missing required order fields" },
+        { status: 400 }
+      );
+    }
+
+    // Validate PIN code
+    if (!orderData.address.zip.match(/^[1-9][0-9]{5}$/)) {
+      return NextResponse.json(
+        { error: "Invalid PIN code. Must be a 6-digit number." },
+        { status: 400 }
+      );
+    }
+
+    // Format the order data with proper _key properties
+    const formattedOrder = {
       _type: 'order',
       orderNumber: orderData.orderNumber,
-      customer: {
-        name: orderData.customerName,
-        email: orderData.customerEmail,
-        clerkUserId: orderData.clerkUserId,
-      },
-      shippingAddress: {
+      customerName: orderData.customerName,
+      customerEmail: orderData.customerEmail,
+      clerkUserId: orderData.clerkUserId,
+      address: {
+        _type: 'address',
         name: orderData.address.name,
         address: orderData.address.address,
         addressLine2: orderData.address.addressLine2,
         city: orderData.address.city,
         state: orderData.address.state,
         zip: orderData.address.zip,
-        phoneNumber: orderData.address.phoneNumber,
+        phoneNumber: orderData.address.phoneNumber
       },
       items: orderData.items.map((item: any) => ({
+        _key: generateKey(),
         _type: 'orderItem',
-        _key: nanoid(),
         product: {
           _type: 'reference',
-          _ref: item.product._id,
+          _ref: item.product._id
         },
         quantity: item.quantity,
-        size: item.size || null,
-        price: item.product.price,
+        size: item.size,
+        price: item.price
       })),
       totalAmount: orderData.totalAmount,
-      paymentStatus: 'cod',
-      paymentMethod: 'cod',
       orderStatus: 'pending',
+      paymentMethod: 'cod',
+      paymentStatus: 'cod',
       createdAt: new Date().toISOString(),
+      updates: [
+        {
+          _key: generateKey(),
+          _type: 'statusUpdate',
+          status: 'Order Placed',
+          timestamp: new Date().toISOString(),
+          description: 'Order has been placed successfully with Cash on Delivery'
+        }
+      ]
+    };
+
+    // Create order document using the write client
+    const order = await backendClient.create(formattedOrder).catch(error => {
+      console.error('Sanity create order error:', error);
+      throw new Error(error.message || 'Failed to create order in database');
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      orderId: order._id 
+    return NextResponse.json({
+      success: true,
+      orderId: order._id,
+      orderNumber: order.orderNumber
     });
-  } catch (error) {
+
+  } catch (error: any) {
     console.error('Error creating COD order:', error);
     return NextResponse.json(
-      { error: "Failed to create order" },
+      { 
+        success: false, 
+        error: error.message || 'Failed to create order'
+      },
       { status: 500 }
     );
   }

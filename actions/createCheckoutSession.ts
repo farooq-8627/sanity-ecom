@@ -1,10 +1,7 @@
 "use server";
 
-import stripe from "@/lib/stripe";
-import { Address } from "@/sanity.types";
-import { urlFor } from "@/sanity/lib/image";
-import { CartItem } from "@/store";
-import Stripe from "stripe";
+import { initiatePhonePePayment } from "@/lib/phonepe";
+import { v4 as uuidv4 } from "uuid";
 
 export interface AddressInfo {
   name: string;
@@ -25,21 +22,9 @@ export interface Metadata {
 }
 
 export interface GroupedCartItems {
-  product: CartItem["product"];
+  product: any;
   quantity: number;
   size?: string;
-}
-
-function getImageUrl(image: any): string {
-  if (!image) return '';
-  if (typeof image === 'string') return image;
-  if (image.url) return image.url;
-  try {
-    return urlFor(image).url();
-  } catch (error) {
-    console.error('Error generating image URL:', error);
-    return '';
-  }
 }
 
 export async function createCheckoutSession(
@@ -47,62 +32,33 @@ export async function createCheckoutSession(
   metadata: Metadata
 ) {
   try {
-    // Retrieve existing customer or create a new one
-    const customers = await stripe.customers.list({
-      email: metadata.customerEmail,
-      limit: 1,
-    });
-    const customerId = customers?.data?.length > 0 ? customers.data[0].id : "";
-
-    // Use environment variable or fallback to localhost
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const orderId = metadata.orderNumber || `ORD-${Date.now()}-${uuidv4().substring(0, 6)}`;
     
-    const sessionPayload: Stripe.Checkout.SessionCreateParams = {
-      metadata: {
-        orderNumber: metadata.orderNumber,
-        customerName: metadata.customerName,
-        customerEmail: metadata.customerEmail,
-        clerkUserId: metadata.clerkUserId!,
-        address: JSON.stringify(metadata.address),
-      },
-      mode: "payment",
-      allow_promotion_codes: true,
-      payment_method_types: ["card"],
-      invoice_creation: {
-        enabled: true,
-      },
-      success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}&orderNumber=${metadata.orderNumber}`,
-      cancel_url: `${baseUrl}/cart`,
-      line_items: items?.map((item) => ({
-        price_data: {
-          currency: "INR",
-          unit_amount: Math.round(item?.product?.price! * 100),
-          product_data: {
-            name: item?.product?.name || "Unknown Product",
-            description: item?.product?.description,
-            metadata: { 
-              id: item?.product?._id,
-              size: item?.size || ""
-            },
-            images:
-              item?.product?.images && item?.product?.images?.length > 0
-                ? [getImageUrl(item?.product?.images[0])]
-                : undefined,
-          },
-        },
-        quantity: item?.quantity,
-      })),
-    };
-    if (customerId) {
-      sessionPayload.customer = customerId;
-    } else {
-      sessionPayload.customer_email = metadata.customerEmail;
-    }
+    // Calculate total amount
+    const totalAmount = items.reduce((total, item) => {
+      return total + (item.product.price * item.quantity);
+    }, 0);
 
-    const session = await stripe.checkout.sessions.create(sessionPayload);
-    return session.url;
+    const paymentRequest = {
+      amount: totalAmount,
+      orderId: orderId,
+      userId: metadata.clerkUserId || 'GUEST',
+      userEmail: metadata.customerEmail,
+      userName: metadata.customerName,
+      callbackUrl: `${baseUrl}/api/webhook/phonepe`,
+      redirectUrl: `${baseUrl}/success?order_id=${orderId}`
+    };
+
+    const response = await initiatePhonePePayment(paymentRequest);
+    
+    if (response.success && response.redirectUrl) {
+      return response.redirectUrl;
+    } else {
+      throw new Error("Failed to create payment session");
+    }
   } catch (error) {
-    console.error("Error creating Checkout Session", error);
+    console.error("Error creating checkout session:", error);
     throw error;
   }
 }

@@ -10,26 +10,24 @@ export const orderType = {
       validation: (Rule: any) => Rule.required(),
     },
     {
-      name: 'customer',
-      title: 'Customer',
-      type: 'object',
-      fields: [
-        {
-          name: 'name',
-          title: 'Name',
-          type: 'string',
-        },
-        {
-          name: 'email',
-          title: 'Email',
-          type: 'string',
-        },
-        {
-          name: 'clerkUserId',
-          title: 'Clerk User ID',
-          type: 'string',
-        },
-      ],
+      name: 'customerName',
+      title: 'Customer Name',
+      type: 'string',
+    },
+    {
+      name: 'customerEmail',
+      title: 'Customer Email',
+      type: 'string',
+    },
+    {
+      name: 'clerkUserId',
+      title: 'Clerk User ID',
+      type: 'string',
+    },
+    {
+      name: 'address',
+      title: 'Shipping Address',
+      type: 'address',
     },
     {
       name: 'items',
@@ -66,78 +64,9 @@ export const orderType = {
       ],
     },
     {
-      name: 'shippingAddress',
-      title: 'Shipping Address',
-      type: 'object',
-      fields: [
-        {
-          name: 'name',
-          title: 'Full Name',
-          type: 'string',
-        },
-        {
-          name: 'address',
-          title: 'Address Line 1',
-          type: 'string',
-        },
-        {
-          name: 'addressLine2',
-          title: 'Address Line 2',
-          type: 'string',
-        },
-        {
-          name: 'city',
-          title: 'City',
-          type: 'string',
-        },
-        {
-          name: 'state',
-          title: 'State',
-          type: 'string',
-        },
-        {
-          name: 'zip',
-          title: 'ZIP/Postal Code',
-          type: 'string',
-        },
-        {
-          name: 'phoneNumber',
-          title: 'Phone Number',
-          type: 'string',
-        },
-      ],
-    },
-    {
       name: 'totalAmount',
       title: 'Total Amount',
       type: 'number',
-      validation: (Rule: any) => Rule.required(),
-    },
-    {
-      name: 'paymentStatus',
-      title: 'Payment Status',
-      type: 'string',
-      options: {
-        list: [
-          { title: 'Pending', value: 'pending' },
-          { title: 'Paid', value: 'paid' },
-          { title: 'Cash on Delivery', value: 'cod' },
-          { title: 'Failed', value: 'failed' },
-          { title: 'Refunded', value: 'refunded' },
-        ],
-      },
-      validation: (Rule: any) => Rule.required(),
-    },
-    {
-      name: 'paymentMethod',
-      title: 'Payment Method',
-      type: 'string',
-      options: {
-        list: [
-          { title: 'Stripe', value: 'stripe' },
-          { title: 'Cash on Delivery', value: 'cod' },
-        ],
-      },
       validation: (Rule: any) => Rule.required(),
     },
     {
@@ -154,6 +83,60 @@ export const orderType = {
         ],
       },
       validation: (Rule: any) => Rule.required(),
+    },
+    {
+      name: 'paymentMethod',
+      title: 'Payment Method',
+      type: 'string',
+      options: {
+        list: [
+          { title: 'Cash on Delivery', value: 'cod' },
+          { title: 'PhonePe', value: 'phonepe' },
+        ],
+      },
+      validation: (Rule: any) => Rule.required(),
+    },
+    {
+      name: 'paymentStatus',
+      title: 'Payment Status',
+      type: 'string',
+      options: {
+        list: [
+          { title: 'Pending', value: 'pending' },
+          { title: 'Paid', value: 'paid' },
+          { title: 'Failed', value: 'failed' },
+          { title: 'COD', value: 'cod' },
+        ],
+      },
+      validation: (Rule: any) => Rule.required(),
+    },
+    {
+      name: 'phonepeDetails',
+      title: 'PhonePe Payment Details',
+      type: 'object',
+      hidden: ({ document }: { document: { paymentMethod?: string } }) => document?.paymentMethod !== 'phonepe',
+      fields: [
+        {
+          name: 'merchantTransactionId',
+          title: 'Merchant Transaction ID',
+          type: 'string',
+        },
+        {
+          name: 'providerReferenceId',
+          title: 'Provider Reference ID',
+          type: 'string',
+        },
+        {
+          name: 'paymentState',
+          title: 'Payment State',
+          type: 'string',
+        },
+        {
+          name: 'payResponseCode',
+          title: 'Payment Response Code',
+          type: 'string',
+        }
+      ]
     },
     {
       name: 'stripeCheckoutId',

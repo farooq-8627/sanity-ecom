@@ -8,6 +8,19 @@ import { format } from "date-fns";
 import { Package, Truck, Box, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 
+interface TrackingInfo {
+  carrier?: string;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  estimatedDelivery?: string;
+  updates: Array<{
+    status: string;
+    location?: string;
+    timestamp: string;
+    description?: string;
+  }>;
+}
+
 interface OrderTrackingDialogProps {
   order: MY_ORDERS_QUERYResult[number] | null;
   isOpen: boolean;
@@ -20,7 +33,9 @@ const OrderTrackingDialog: React.FC<OrderTrackingDialogProps> = ({
   onClose,
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [trackingInfo, setTrackingInfo] = useState(order?.tracking);
+  const [trackingInfo, setTrackingInfo] = useState<TrackingInfo | null>({
+    updates: order?.updates || []
+  });
 
   const refreshTracking = async () => {
     if (!order?._id) return;
@@ -148,7 +163,7 @@ const OrderTrackingDialog: React.FC<OrderTrackingDialogProps> = ({
               {/* Tracking Timeline */}
               {trackingInfo.updates && trackingInfo.updates.length > 0 && (
                 <div className="relative space-y-8 before:absolute before:inset-0 before:ml-5 before:h-full before:w-0.5 before:-translate-x-1/2 before:bg-gray-200">
-                  {trackingInfo.updates.map((update, index) => (
+                  {trackingInfo.updates.map((update: { status: string; location?: string; timestamp: string; description?: string }, index: number) => (
                     <div key={index} className="relative flex items-start gap-6 group">
                       <div className={`flex h-12 w-12 items-center justify-center rounded-full ${getStatusColor(update.status)} relative z-10`}>
                         {getStatusIcon(update.status)}

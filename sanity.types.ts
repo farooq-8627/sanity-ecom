@@ -200,40 +200,14 @@ export type Author = {
   }>;
 };
 
-export type Order = {
+export interface Order {
   _id: string;
-  _type: "order";
-  _createdAt: string;
-  _updatedAt: string;
-  _rev: string;
+  _type: string;
   orderNumber: string;
-  customer: {
-    name: string;
-    email: string;
-    clerkUserId: string;
-  };
-  items: Array<{
-    _type: 'orderItem';
-    product: {
-      images?: Array<{
-        asset?: {
-          _ref: string;
-          _type: "reference";
-        };
-        hotspot?: SanityImageHotspot;
-        crop?: SanityImageCrop;
-        _type: "image";
-        _key: string;
-      }>;
-      name: string;
-      price: number;
-      slug: Slug;
-    };
-    quantity: number;
-    size?: string;
-    price: number;
-  }>;
-  shippingAddress: {
+  customerName: string;
+  customerEmail: string;
+  clerkUserId: string;
+  address: {
     name: string;
     address: string;
     addressLine2?: string;
@@ -242,30 +216,36 @@ export type Order = {
     zip: string;
     phoneNumber: string;
   };
-  tracking?: {
-    carrier?: string;
-    trackingNumber?: string;
-    trackingUrl?: string;
-    estimatedDelivery?: string;
-    updates?: Array<{
-      status: string;
-      location?: string;
-      timestamp: string;
-      description?: string;
-    }>;
-  };
+  items: {
+    product: {
+      _id: string;
+      name: string;
+      price: number;
+      images: any[];
+      slug: { current: string };
+    };
+    quantity: number;
+    size?: string;
+  }[];
   totalAmount: number;
-  paymentStatus: 'pending' | 'paid' | 'cod' | 'failed' | 'refunded';
-  paymentMethod: 'stripe' | 'cod';
-  orderStatus: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  stripeCheckoutId?: string;
-  stripePaymentIntentId?: string;
-  stripeCustomerId?: string;
-  stripeInvoiceId?: string;
-  stripeInvoiceUrl?: string;
+  orderStatus: 'pending' | 'packed' | 'shipped' | 'delivered' | 'cancelled';
+  paymentMethod: 'cod' | 'phonepe';
+  paymentStatus: 'pending' | 'paid' | 'failed' | 'cod';
+  phonepeDetails?: {
+    merchantTransactionId: string;
+    providerReferenceId: string;
+    paymentState: string;
+    payResponseCode: string;
+  };
+  updates?: {
+    status: string;
+    location?: string;
+    timestamp: string;
+    description?: string;
+  }[];
   createdAt: string;
   updatedAt?: string;
-};
+}
 
 export interface ProductSize {
   _key: string;
@@ -459,24 +439,22 @@ export type Slug = {
   source?: string;
 };
 
-export type UserAddress = {
-  _id: string;
-  _type: "userAddress";
-  _createdAt: string;
-  _updatedAt: string;
-  _rev: string;
-  clerkUserId?: string;
-  addressName?: string;
-  fullName?: string;
-  phoneNumber?: string;
-  addressLine1?: string;
+export interface UserAddress {
+  _id?: string;
+  _type?: string;
+  addressName: string;
+  fullName: string;
+  phoneNumber: string;
+  addressLine1: string;
   addressLine2?: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
+  city: string;
+  state: {
+    title: string;
+    code: string;
+  };
+  pincode: string;
   isDefault?: boolean;
-  createdAt?: string;
-};
+}
 
 export type AllSanitySchemaTypes = SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityFileAsset | Geopoint | Address | Blogcategory | Blog | Author | Order | Product | Brand | BlockContent | Category | SanityImageCrop | SanityImageHotspot | SanityImageAsset | SanityAssetSourceData | SanityImageMetadata | Slug | UserAddress;
 export declare const internalGroqTypeReferenceTo: unique symbol;

@@ -46,33 +46,59 @@ export default function CheckoutPage() {
 
   const handleSelectAddress = (address: UserAddress | null) => {
     setSelectedAddress(address);
-    setError(null); // Clear any previous errors
+    setError(null);
+    // if (address) {
+    //   // Save to sessionStorage for immediate use
+    //   sessionStorage.setItem("checkoutAddress", JSON.stringify(address));
+    //   // Also save to localStorage for future use
+    //   localStorage.setItem("selectedAddress", JSON.stringify(address));
+    // }
   };
 
   const createCodOrder = async () => {
     try {
       const orderData = {
+        _type: 'order',
         orderNumber: `ORD-${Date.now()}-${uuidv4().substring(0, 6)}`,
         customerName: user?.fullName ?? selectedAddress?.fullName ?? "Unknown",
         customerEmail: user?.primaryEmailAddress?.emailAddress ?? "Unknown",
         clerkUserId: user?.id,
         address: {
+          _type: 'address',
           name: selectedAddress?.fullName ?? "",
           address: selectedAddress?.addressLine1 ?? "",
           addressLine2: selectedAddress?.addressLine2 ?? "",
           city: selectedAddress?.city ?? "",
-          state: selectedAddress?.state ?? "",
+          state: selectedAddress?.state ?? { title: "", code: "" },
           zip: selectedAddress?.pincode ?? "",
-          phoneNumber: selectedAddress?.phoneNumber ?? "",
+          phoneNumber: selectedAddress?.phoneNumber ?? ""
         },
         items: groupedItems.map(item => ({
-          product: item.product,
+          _key: uuidv4(),
+          _type: 'orderItem',
+          product: {
+            _type: 'reference',
+            _ref: item.product._id,
+            _weak: false
+          },
           quantity: item.quantity,
           size: item.size,
+          price: item.product.price
         })),
         totalAmount: subtotal,
-        paymentStatus: "cod",
-        orderStatus: "pending"
+        orderStatus: 'pending',
+        paymentMethod: 'cod',
+        paymentStatus: 'cod',
+        createdAt: new Date().toISOString(),
+        updates: [
+          {
+            _key: uuidv4(),
+            _type: 'statusUpdate',
+            status: 'Order Placed',
+            timestamp: new Date().toISOString(),
+            description: 'Order has been placed successfully with Cash on Delivery'
+          }
+        ]
       };
 
       const response = await fetch('/api/orders/cod', {
@@ -84,12 +110,13 @@ export default function CheckoutPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create COD order');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create COD order');
       }
 
-      const { orderId } = await response.json();
+      const { orderId, orderNumber } = await response.json();
       resetCart();
-      router.push(`/success?order_id=${orderId}&payment_method=cod`);
+      router.push(`/success?order_id=${orderNumber}&payment_method=cod`);
     } catch (error) {
       console.error('Error creating COD order:', error);
       setError("Failed to create order. Please try again.");

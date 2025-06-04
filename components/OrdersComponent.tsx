@@ -32,13 +32,13 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
   };
 
   const getOrderStatusDisplay = (order: MY_ORDERS_QUERYResult[number]) => {
-    // First check tracking status
-    const trackingStatus = getOrderStatusFromTracking(order.tracking);
-    if (trackingStatus) {
-      return trackingStatus;
+    // First check tracking status from updates
+    const latestUpdate = order.updates?.[order.updates.length - 1];
+    if (latestUpdate) {
+      return latestUpdate.status;
     }
 
-    // If no tracking, handle initial order status
+    // If no updates, handle initial order status
     if (order.orderStatus === "pending") {
       if (order.paymentStatus === "paid" || order.paymentStatus === "cod") {
         return "Confirmed";
@@ -50,11 +50,10 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
   };
 
   const getStatusColor = (order: MY_ORDERS_QUERYResult[number]) => {
-    // First check tracking status
-    const trackingStatus = getOrderStatusFromTracking(order.tracking);
-    
-    if (trackingStatus) {
-      switch (trackingStatus) {
+    // First check status from updates
+    const latestUpdate = order.updates?.[order.updates.length - 1];
+    if (latestUpdate) {
+      switch (latestUpdate.status) {
         case "Delivered":
           return "bg-green-100 text-green-800";
         case "Out for Delivery":
@@ -62,15 +61,18 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
         case "Shipped":
           return "bg-blue-100 text-blue-800";
         case "Processing":
-          return "bg-yellow-100 text-yellow-800";
         case "Packed":
           return "bg-yellow-100 text-yellow-800";
+        case "Delayed":
+        case "Failed Delivery Attempt":
+        case "Exception":
+          return "bg-red-100 text-red-800";
         default:
           return "bg-gray-100 text-gray-800";
       }
     }
 
-    // If no tracking status, handle basic order status
+    // If no updates, handle basic order status
     if (order.orderStatus === "pending") {
       if (order.paymentStatus === "paid" || order.paymentStatus === "cod") {
         return "bg-green-100 text-green-800";
@@ -83,7 +85,7 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
         return "bg-green-100 text-green-800";
       case "shipped":
         return "bg-blue-100 text-blue-800";
-      case "processing":
+      case "packed":
         return "bg-yellow-100 text-yellow-800";
       case "cancelled":
         return "bg-red-100 text-red-800";

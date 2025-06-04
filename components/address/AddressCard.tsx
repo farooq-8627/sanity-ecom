@@ -43,7 +43,7 @@ const AddressCard: React.FC<AddressCardProps> = ({
       setIsDeleting(true);
 
       if (onDelete) {
-        onDelete(address._id);
+        onDelete(address._id || "");
       } else {
         try {
           const response = await fetch(`/api/addresses?id=${address._id}`, {
@@ -109,7 +109,7 @@ const AddressCard: React.FC<AddressCardProps> = ({
                 <p>{address.addressLine1}</p>
                 {address.addressLine2 && <p>{address.addressLine2}</p>}
                 <p>
-                  {address.city}, {address.state} - {address.pincode}
+                    {address.city}, {address.state.title} - {address.pincode}
                 </p>
                 <p className="flex items-center gap-1">
                   <span className="font-medium text-gray-700">Phone:</span>

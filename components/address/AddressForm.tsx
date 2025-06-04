@@ -6,6 +6,54 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2, Home, Briefcase, Plus } from "lucide-react";
 import { UserAddress } from "@/sanity.types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// Indian states mapping
+const indianStates = [
+  { title: 'Andhra Pradesh', code: 'AP' },
+  { title: 'Arunachal Pradesh', code: 'AR' },
+  { title: 'Assam', code: 'AS' },
+  { title: 'Bihar', code: 'BR' },
+  { title: 'Chhattisgarh', code: 'CG' },
+  { title: 'Goa', code: 'GA' },
+  { title: 'Gujarat', code: 'GJ' },
+  { title: 'Haryana', code: 'HR' },
+  { title: 'Himachal Pradesh', code: 'HP' },
+  { title: 'Jharkhand', code: 'JH' },
+  { title: 'Karnataka', code: 'KA' },
+  { title: 'Kerala', code: 'KL' },
+  { title: 'Madhya Pradesh', code: 'MP' },
+  { title: 'Maharashtra', code: 'MH' },
+  { title: 'Manipur', code: 'MN' },
+  { title: 'Meghalaya', code: 'ML' },
+  { title: 'Mizoram', code: 'MZ' },
+  { title: 'Nagaland', code: 'NL' },
+  { title: 'Odisha', code: 'OD' },
+  { title: 'Punjab', code: 'PB' },
+  { title: 'Rajasthan', code: 'RJ' },
+  { title: 'Sikkim', code: 'SK' },
+  { title: 'Tamil Nadu', code: 'TN' },
+  { title: 'Telangana', code: 'TG' },
+  { title: 'Tripura', code: 'TR' },
+  { title: 'Uttar Pradesh', code: 'UP' },
+  { title: 'Uttarakhand', code: 'UK' },
+  { title: 'West Bengal', code: 'WB' },
+  // Union Territories
+  { title: 'Andaman and Nicobar Islands', code: 'AN' },
+  { title: 'Chandigarh', code: 'CH' },
+  { title: 'Dadra and Nagar Haveli and Daman and Diu', code: 'DN' },
+  { title: 'Delhi', code: 'DL' },
+  { title: 'Jammu and Kashmir', code: 'JK' },
+  { title: 'Ladakh', code: 'LA' },
+  { title: 'Lakshadweep', code: 'LD' },
+  { title: 'Puducherry', code: 'PY' }
+];
 
 interface AddressFormProps {
   address?: UserAddress;
@@ -28,7 +76,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
     addressLine1: address?.addressLine1 || "",
     addressLine2: address?.addressLine2 || "",
     city: address?.city || "",
-    state: address?.state || "",
+    state: address?.state || { title: "", code: "" },
     pincode: address?.pincode || "",
     isDefault: address?.isDefault || false,
   });
@@ -39,6 +87,19 @@ const AddressForm: React.FC<AddressFormProps> = ({
       ...formData,
       [name]: type === "checkbox" ? checked : value,
     });
+  };
+
+  const handleStateChange = (value: string) => {
+    const selectedState = indianStates.find(state => state.title === value);
+    if (selectedState) {
+      setFormData(prev => ({
+        ...prev,
+        state: {
+          title: selectedState.title,
+          code: selectedState.code
+        }
+      }));
+    }
   };
 
   const handleAddressTypeSelect = (type: string) => {
@@ -60,10 +121,29 @@ const AddressForm: React.FC<AddressFormProps> = ({
     try {
       // Validate form
       const requiredFields = ["addressName", "fullName", "phoneNumber", "addressLine1", "city", "state", "pincode"];
-      const missingFields = requiredFields.filter(field => !formData[field as keyof typeof formData]);
+      const missingFields = requiredFields.filter(field => {
+        if (field === "state") {
+          return !formData.state.title;
+        }
+        return !formData[field as keyof typeof formData];
+      });
       
       if (missingFields.length > 0) {
         alert(`Please fill in all required fields: ${missingFields.join(", ")}`);
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate phone number
+      if (!formData.phoneNumber.match(/^[6-9][0-9]{9}$/)) {
+        alert("Please enter a valid 10-digit mobile number starting with 6-9");
+        setIsLoading(false);
+        return;
+      }
+
+      // Validate PIN code
+      if (!formData.pincode.match(/^[1-9][0-9]{5}$/)) {
+        alert("Please enter a valid 6-digit PIN code");
         setIsLoading(false);
         return;
       }
@@ -174,10 +254,12 @@ const AddressForm: React.FC<AddressFormProps> = ({
             <Input
               id="phoneNumber"
               name="phoneNumber"
-              placeholder="9876543210"
+              placeholder="10-digit mobile number"
               value={formData.phoneNumber}
               onChange={handleChange}
               required
+              pattern="[6-9][0-9]{9}"
+              title="Please enter a valid 10-digit mobile number starting with 6-9"
             />
           </div>
         </div>
@@ -203,7 +285,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
           <Input
             id="addressLine2"
             name="addressLine2"
-            placeholder="Apartment, suite, floor, etc. (optional)"
+            placeholder="Apartment, suite, unit, building, floor, etc."
             value={formData.addressLine2}
             onChange={handleChange}
           />
@@ -227,46 +309,55 @@ const AddressForm: React.FC<AddressFormProps> = ({
             <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
               State <span className="text-red-500">*</span>
             </label>
-            <Input
-              id="state"
-              name="state"
-              placeholder="State"
-              value={formData.state}
-              onChange={handleChange}
-              required
-            />
+            <Select
+              value={formData.state.title}
+              onValueChange={handleStateChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select state" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px] overflow-y-auto">
+                {indianStates.sort((a, b) => a.title.localeCompare(b.title)).map((state) => (
+                  <SelectItem key={state.code} value={state.title}>
+                    {state.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <label htmlFor="pincode" className="block text-sm font-medium text-gray-700 mb-1">
-              Pincode <span className="text-red-500">*</span>
+              PIN Code <span className="text-red-500">*</span>
             </label>
             <Input
               id="pincode"
               name="pincode"
-              placeholder="Pincode"
+              placeholder="6-digit PIN code"
               value={formData.pincode}
               onChange={handleChange}
               required
+              pattern="[1-9][0-9]{5}"
+              title="Please enter a valid 6-digit PIN code"
             />
           </div>
         </div>
 
-        <div className="flex items-center">
+        <div className="flex items-center space-x-2">
           <input
+            type="checkbox"
             id="isDefault"
             name="isDefault"
-            type="checkbox"
-            className="h-4 w-4 text-shop_dark_green focus:ring-shop_dark_green border-gray-300 rounded"
             checked={formData.isDefault}
             onChange={handleChange}
+            className="h-4 w-4 rounded border-gray-300 text-shop_dark_green focus:ring-shop_dark_green"
           />
-          <label htmlFor="isDefault" className="ml-2 block text-sm text-gray-700">
+          <label htmlFor="isDefault" className="text-sm text-gray-700">
             Set as default address
           </label>
         </div>
       </div>
 
-      <div className="flex justify-end space-x-3 mt-6">
+      <div className="flex justify-end space-x-4">
         <Button
           type="button"
           variant="outline"
@@ -282,7 +373,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
               Saving...
             </>
           ) : (
-            <>Save Address</>
+            'Save Address'
           )}
         </Button>
       </div>

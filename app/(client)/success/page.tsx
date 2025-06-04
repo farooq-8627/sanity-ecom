@@ -1,87 +1,160 @@
 "use client";
 
-import useStore from "@/store";
-import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect } from "react";
-import { motion } from "motion/react";
-import { Check, Home, Package, ShoppingBag } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { verifyPaymentStatus } from "@/lib/phonepe";
+import Container from "@/components/Container";
+import { Button } from "@/components/ui/button";
+import { Check, Loader2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import useStore from "@/store";
+import { useUser } from "@clerk/nextjs";
 
-const SuccessPageContent = () => {
-  const { resetCart } = useStore();
+export default function SuccessPage() {
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const searchParams = useSearchParams();
-  const orderNumber = searchParams.get("orderNumber");
+  const router = useRouter();
+  const resetCart = useStore((state) => state.resetCart);
+  const { isLoaded, isSignedIn, user } = useUser();
+  const orderId = searchParams.get("order_id");
+  const paymentMethod = searchParams.get("payment_method");
 
   useEffect(() => {
-    if (orderNumber) {
-      resetCart();
+    // Wait for auth to load
+    if (!isLoaded) return;
+
+    // If no orderId, redirect to cart
+    if (!orderId) {
+      router.push("/cart");
+      return;
     }
-  }, [orderNumber, resetCart]);
-  return (
-    <div className="py-5 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center mx-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-white rounded-2xl flex flex-col gap-8 shadow-2xl p-6 max-w-xl w-full text-center"
-      >
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="w-20 h-20 bg-black rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg"
-        >
-          <Check className="text-white w-10 h-10" />
-        </motion.div>
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
-          Order Confirmed!
-        </h1>
-        <div className="space-y-4 mb-4 text-left">
-          <p className="text-gray-700">
-            Thank you for your purchase. We&apos;re processing your order and
-            will ship it soon. A confirmation email with your order details will
-            be sent to your inbox shortly.
-          </p>
-          <p className="text-gray-700">
-            Order Number:{" "}
-            <span className="text-black font-semibold">{orderNumber}</span>
-          </p>
+    // Only verify if user is signed in
+    if (!isSignedIn) {
+      setError("Please sign in to view your order");
+      setIsVerifying(false);
+      return;
+    }
+
+    const verifyOrder = async () => {
+      try {
+        // For COD orders, just reset cart and show success
+        if (paymentMethod === "cod") {
+          resetCart();
+          setIsVerifying(false);
+          return;
+        }
+
+        // For PhonePe orders, verify payment status
+        if (paymentMethod === "phonepe") {
+          const response = await fetch(`/api/orders/phonepe/status?merchantTransactionId=${orderId}`);
+          const result = await response.json();
+
+          if (result.success) {
+            resetCart();
+            setIsVerifying(false);
+          } else {
+            throw new Error(result.error || "Payment verification failed");
+          }
+        }
+      } catch (err: any) {
+        console.error("Order verification error:", err);
+        setError(err.message || "Failed to verify order");
+        setIsVerifying(false);
+      }
+    };
+
+    verifyOrder();
+  }, [isLoaded, isSignedIn, orderId, paymentMethod, router, resetCart]);
+
+  // Show loading while auth is loading
+  if (!isLoaded) {
+    return (
+      <Container>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-10 w-10 animate-spin text-shop_dark_green mx-auto" />
+            <h2 className="mt-4 text-lg font-semibold">Loading...</h2>
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Link
-            href="/"
-            className="flex items-center justify-center px-4 py-3 font-semibold bg-black text-white rounded-lg hover:bg-gray-800 transition-all duration-300 shadow-md"
-          >
-            <Home className="w-5 h-5 mr-2" />
-            Home
-          </Link>
-          <Link
-            href="/orders"
-            className="flex items-center justify-center px-4 py-3 font-semibold bg-lightGreen text-black border border-lightGreen rounded-lg hover:bg-gray-100 transition-all duration-300 shadow-md"
-          >
-            <Package className="w-5 h-5 mr-2" />
-            Orders
-          </Link>
-          <Link
-            href="/"
-            className="flex items-center justify-center px-4 py-3 font-semibold bg-black text-white rounded-lg hover:bg-gray-800 transition-all duration-300 shadow-md"
-          >
-            <ShoppingBag className="w-5 h-5 mr-2" />
-            Shop
-          </Link>
+      </Container>
+    );
+  }
+
+  // Show verification loading
+  if (isVerifying) {
+    return (
+      <Container>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="h-10 w-10 animate-spin text-shop_dark_green mx-auto" />
+            <h2 className="mt-4 text-lg font-semibold">Verifying Order</h2>
+            <p className="mt-2 text-gray-500">Please wait while we confirm your order...</p>
+          </div>
         </div>
-      </motion.div>
-    </div>
-  );
-};
+      </Container>
+    );
+  }
 
-const SuccessPage = () => {
+  // Show error state
+  if (error) {
+    return (
+      <Container>
+        <div className="min-h-[60vh] flex flex-col items-center justify-center">
+          <div className="text-center max-w-md mx-auto">
+            <div className="bg-red-100 rounded-full p-3 w-fit mx-auto">
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="mt-4 text-xl font-semibold text-red-600">Order Error</h2>
+            <p className="mt-2 text-gray-600">{error}</p>
+            <div className="mt-6 space-y-3">
+              {!isSignedIn ? (
+                <Button asChild className="w-full">
+                  <Link href="/sign-in">Sign In</Link>
+                </Button>
+              ) : (
+                <>
+                  <Button asChild className="w-full">
+                    <Link href="/checkout">Return to Checkout</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href="/cart">View Cart</Link>
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </Container>
+    );
+  }
+
+  // Show success state
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <SuccessPageContent />
-    </Suspense>
+    <Container>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-green-100 rounded-full p-3 w-fit mx-auto">
+            <Check className="h-8 w-8 text-green-600" />
+          </div>
+          <h2 className="mt-4 text-xl font-semibold text-green-600">Order Confirmed!</h2>
+          <p className="mt-2 text-gray-600">
+            {paymentMethod === "cod" 
+              ? "Your order has been placed successfully. You can pay when your order arrives."
+              : "Your payment has been processed and order has been confirmed."}
+          </p>
+          <p className="mt-1 text-sm text-gray-500">Order ID: {orderId}</p>
+          <div className="mt-6 space-y-3">
+            <Button asChild className="w-full">
+              <Link href="/orders">View Orders</Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full">
+              <Link href="/">Continue Shopping</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Container>
   );
-};
-
-export default SuccessPage;
+}
