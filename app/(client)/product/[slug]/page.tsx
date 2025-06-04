@@ -71,7 +71,7 @@ export default async function SingleProductPage({ params }: Props) {
             offers: {
               "@type": "Offer",
               price: product.price,
-              priceCurrency: "USD",
+              priceCurrency: "INR",
               availability: product.stock > 0 ? "InStock" : "OutOfStock",
             },
           }),

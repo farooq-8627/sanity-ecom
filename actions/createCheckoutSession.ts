@@ -6,12 +6,22 @@ import { urlFor } from "@/sanity/lib/image";
 import { CartItem } from "@/store";
 import Stripe from "stripe";
 
+export interface AddressInfo {
+  name: string;
+  address: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  zip: string;
+  phoneNumber: string;
+}
+
 export interface Metadata {
   orderNumber: string;
   customerName: string;
   customerEmail: string;
   clerkUserId?: string;
-  address?: Address | null;
+  address?: AddressInfo | null;
 }
 
 export interface GroupedCartItems {
@@ -65,7 +75,7 @@ export async function createCheckoutSession(
       cancel_url: `${baseUrl}/cart`,
       line_items: items?.map((item) => ({
         price_data: {
-          currency: "USD",
+          currency: "INR",
           unit_amount: Math.round(item?.product?.price! * 100),
           product_data: {
             name: item?.product?.name || "Unknown Product",

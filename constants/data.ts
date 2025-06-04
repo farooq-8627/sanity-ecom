@@ -90,9 +90,9 @@ export const paymentMethods = [
 
 // Shipping information
 export const shippingInfo = {
-  freeShippingThreshold: 50, // Free shipping for orders over $50
-  standardShipping: 5.99,
-  expressShipping: 12.99,
-  internationalShipping: 25.99,
+  freeShippingThreshold: 4000, // Free shipping for orders over ₹4000
+  standardShipping: 299,
+  expressShipping: 499,
+  internationalShipping: 1999,
   estimatedDelivery: "3-5 business days",
 };

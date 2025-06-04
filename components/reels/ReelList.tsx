@@ -15,7 +15,7 @@ import { useUser } from "@clerk/nextjs";
 import AddToCartButton from "../AddToCartButton";
 import FavoriteButton from "../FavoriteButton";
 import { ProductSize } from "@/sanity.types";
-import ReelListSkeliton from "../ReelListSkeliton";
+import ReelListSkeliton from "../skeletons/ReelListSkeliton";
 
 interface ReelListProps {
   reels: ProductReel[];

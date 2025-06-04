@@ -4,7 +4,7 @@ import ReelList from "@/components/reels/ReelList";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import ReelSkeleton from "@/components/ReelSkeleton";
+import ReelSkeleton from "@/components/skeletons/ReelSkeleton";
 import { siteConfig } from "@/constants/data";
 
 // Query to get all reels with their associated products

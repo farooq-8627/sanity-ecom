@@ -435,7 +435,26 @@ export type Slug = {
   source?: string;
 };
 
-export type AllSanitySchemaTypes = SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityFileAsset | Geopoint | Address | Blogcategory | Blog | Author | Order | Product | Brand | BlockContent | Category | SanityImageCrop | SanityImageHotspot | SanityImageAsset | SanityAssetSourceData | SanityImageMetadata | Slug;
+export type UserAddress = {
+  _id: string;
+  _type: "userAddress";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  clerkUserId?: string;
+  addressName?: string;
+  fullName?: string;
+  phoneNumber?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  isDefault?: boolean;
+  createdAt?: string;
+};
+
+export type AllSanitySchemaTypes = SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityFileAsset | Geopoint | Address | Blogcategory | Blog | Author | Order | Product | Brand | BlockContent | Category | SanityImageCrop | SanityImageHotspot | SanityImageAsset | SanityAssetSourceData | SanityImageMetadata | Slug | UserAddress;
 export declare const internalGroqTypeReferenceTo: unique symbol;
 // Source: ./sanity/queries/query.ts
 // Variable: BRANDS_QUERY
