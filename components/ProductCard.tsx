@@ -4,7 +4,7 @@ import Image from "next/image";
 import React from "react";
 import Link from "next/link";
 import { StarIcon } from "@sanity/icons";
-import { Flame, Tag, Percent, Ruler } from "lucide-react";
+import { Flame, Tag, Percent, Ruler, ShoppingBag } from "lucide-react";
 import PriceView from "./PriceView";
 import Title from "./Title";
 import ProductSideMenu from "./ProductSideMenu";
@@ -32,7 +32,7 @@ const ProductCard = ({ product }: { product: Product }) => {
               "w-36 rounded-full mt-4 bg-shop_light_green text-white hover:bg-shop_dark_green transition-colors"
             )}
           >
-            View Cart
+            <ShoppingBag className="mr-2" /> View Cart
           </Button>
         );
       } else {

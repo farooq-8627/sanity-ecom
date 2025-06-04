@@ -31,6 +31,8 @@ const ReelSkeleton = () => {
             <div className="absolute right-4 bottom-24 flex flex-col gap-3">
               <div className="w-8 h-8 rounded-full bg-gray-300 animate-pulse"></div>
               <div className="w-8 h-8 rounded-full bg-gray-300 animate-pulse"></div>
+              <div className="w-8 h-8 rounded-full bg-gray-300 animate-pulse"></div>
+              <div className="w-8 h-8 rounded-full bg-gray-300 animate-pulse"></div>
             </div>
           </div>
         </div>

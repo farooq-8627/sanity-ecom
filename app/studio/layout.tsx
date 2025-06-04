@@ -1,9 +1,11 @@
 import "../globals.css";
 import { Toaster } from "react-hot-toast";
+import { siteConfig } from "@/constants/data";
 
 export const metadata = {
-  title: 'Sanity Studio',
-  description: 'Content Management for ShopCart',
+  title: `Sanity Studio for ${siteConfig.name}`,
+  description: `Content Management for ${siteConfig.seo.title}`,
+
 }
 
 export default function StudioLayout({

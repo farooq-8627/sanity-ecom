@@ -6,14 +6,19 @@ import { urlFor } from "@/sanity/lib/image";
 import Link from "next/link";
 import { Calendar } from "lucide-react";
 import dayjs from "dayjs";
+import { GET_ALL_BLOGResult } from "@/sanity.types";
 
 const LatestBlog = async () => {
   const blogs = await getLatestBlogs();
+  const hasBlogs = Array.isArray(blogs) && blogs.length > 0;
+  
+  if (!hasBlogs) return null;
+  
   return (
     <div className="mb-10 lg:mb-20">
       <Title>Latest Blog</Title>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mt-5">
-        {blogs?.map((blog) => (
+        {blogs?.map((blog: GET_ALL_BLOGResult[number]) => (
           <div key={blog?._id} className="rounded-lg overflow-hidden">
             {blog?.mainImage && (
               <Link href={`/blog/${blog?.slug?.current}`}>

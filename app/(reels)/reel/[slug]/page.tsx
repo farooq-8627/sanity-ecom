@@ -5,6 +5,7 @@ import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import ReelSkeleton from "@/components/ReelSkeleton";
+import { siteConfig } from "@/constants/data";
 
 // Query to get all reels with their associated products
 const reelsQuery = groq`*[_type == "productReel"] {
@@ -68,14 +69,40 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   
   if (!reel) {
     return {
-      title: "Reel Not Found",
+      title: "Reel Not Found | " + siteConfig.name,
       description: "The requested reel could not be found."
     };
   }
   
+  // Get the product image URL if available, or use the default SVG
+  const productImage = reel.product.images?.[0]?.url || siteConfig.seo.ogImage;
+  
   return {
-    title: `${reel.product.name} | Shop Reels`,
-    description: reel.product.description || "Watch this product in action and shop directly from the reel."
+    title: `${reel.product.name} | ${siteConfig.name} Reels`,
+    description: reel.product.description || "Watch this product in action and shop directly from the reel.",
+    keywords: siteConfig.seo.keywords + ", video, reels, " + reel.product.name,
+    openGraph: {
+      title: `${reel.product.name} | ${siteConfig.name}`,
+      description: reel.product.description || "Watch this product in action and shop directly from the reel.",
+      images: [{
+        url: productImage,
+        width: 1200,
+        height: 630,
+        alt: reel.product.name,
+      }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${reel.product.name} | ${siteConfig.name}`,
+      description: reel.product.description || "Watch this product in action and shop directly from the reel.",
+      creator: siteConfig.seo.twitterHandle,
+      images: [{
+        url: productImage,
+        width: 1200,
+        height: 630,
+        alt: reel.product.name,
+      }],
+    },
   };
 }
 

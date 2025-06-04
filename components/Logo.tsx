@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import React from "react";
+import { siteConfig } from "@/constants/data";
 
 const Logo = ({
   className,
@@ -17,14 +18,14 @@ const Logo = ({
           className
         )}
       >
-        Shopcar
+        {siteConfig.logo.text}
         <span
           className={cn(
             "text-shop_light_green group-hover:text-shop_dark_green hoverEffect",
             spanDesign
           )}
         >
-          t
+          {siteConfig.logo.highlight}
         </span>
       </h2>
     </Link>

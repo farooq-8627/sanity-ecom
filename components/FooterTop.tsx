@@ -1,5 +1,6 @@
 import { Clock, Mail, MapPin, Phone } from "lucide-react";
 import React from "react";
+import { siteConfig } from "@/constants/data";
 
 interface ContactItemData {
   title: string;
@@ -7,38 +8,39 @@ interface ContactItemData {
   icon: React.ReactNode;
 }
 
-const data: ContactItemData[] = [
-  {
-    title: "Visit Us",
-    subtitle: "New Orlean, USA",
-    icon: (
-      <MapPin className="h-6 w-6 text-gray-600 group-hover:text-primary transition-colors" />
-    ),
-  },
-  {
-    title: "Call Us",
-    subtitle: "+12 958 648 597",
-    icon: (
-      <Phone className="h-6 w-6 text-gray-600 group-hover:text-primary transition-colors" />
-    ),
-  },
-  {
-    title: "Working Hours",
-    subtitle: "Mon - Sat: 10:00 AM - 7:00 PM",
-    icon: (
-      <Clock className="h-6 w-6 text-gray-600 group-hover:text-primary transition-colors" />
-    ),
-  },
-  {
-    title: "Email Us",
-    subtitle: "Shopcart@gmail.com",
-    icon: (
-      <Mail className="h-6 w-6 text-gray-600 group-hover:text-primary transition-colors" />
-    ),
-  },
-];
-
 const FooterTop = () => {
+  // Create data array using siteConfig
+  const data: ContactItemData[] = [
+    {
+      title: "Visit Us",
+      subtitle: siteConfig.contact.address,
+      icon: (
+        <MapPin className="h-6 w-6 text-gray-600 group-hover:text-primary transition-colors" />
+      ),
+    },
+    {
+      title: "Call Us",
+      subtitle: siteConfig.contact.phone,
+      icon: (
+        <Phone className="h-6 w-6 text-gray-600 group-hover:text-primary transition-colors" />
+      ),
+    },
+    {
+      title: "Working Hours",
+      subtitle: siteConfig.contact.workingHours,
+      icon: (
+        <Clock className="h-6 w-6 text-gray-600 group-hover:text-primary transition-colors" />
+      ),
+    },
+    {
+      title: "Email Us",
+      subtitle: siteConfig.contact.email,
+      icon: (
+        <Mail className="h-6 w-6 text-gray-600 group-hover:text-primary transition-colors" />
+      ),
+    },
+  ];
+
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 border-b">
       {data?.map((item, index) => (
