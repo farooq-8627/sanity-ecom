@@ -3,27 +3,38 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import Image from "next/image";
 import Container from "@/components/Container";
 import { Button } from "@/components/ui/button";
-import { Loader2, CreditCard, Wallet } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, CreditCard, Wallet, Tag, X } from "lucide-react";
 import AddressSelector from "@/components/address/AddressSelector";
-import { UserAddress } from "@/sanity.types";
-import useStore from "@/store";
+import { UserAddress } from "@/types";
+import useStore, { CartItem } from "@/store";
 import { formatCurrency } from "@/lib/utils";
 import PriceFormatter from "@/components/PriceFormatter";
 import { v4 as uuidv4 } from "uuid";
-import { GroupedCartItems, createCheckoutSession, Metadata, AddressInfo } from "@/actions/createCheckoutSession";
-import { Product } from "@/sanity.types";
+import { GroupedCartItems, createCheckoutSession, type Metadata, type AddressInfo } from "@/actions/createCheckoutSession";
+import { Product } from "@/sanity/schemas/schema";
 import CheckoutSkeleton from "@/components/skeletons/CheckoutSkeleton";
+import { client } from "@/sanity/lib/client";
+import imageUrlBuilder from '@sanity/image-url'
 import toast from "react-hot-toast";
 
-interface CartItem {
-  product: Product;
-  quantity: number;
-  size?: string;
+const builder = imageUrlBuilder(client);
+
+function urlFor(source: any) {
+  return builder.image(source);
 }
 
 type PaymentMethod = 'cod' | 'prepaid';
+
+interface AppliedCoupon {
+  code: string;
+  discount: number;
+  type: 'percentage' | 'fixed';
+  value: number;
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -36,6 +47,9 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('prepaid');
   const resetCart = useStore((state) => state.resetCart);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+  const [isCouponLoading, setIsCouponLoading] = useState(false);
 
   useEffect(() => {
     // Redirect to cart if cart is empty
@@ -47,6 +61,59 @@ export default function CheckoutPage() {
   const handleSelectAddress = (address: UserAddress | null) => {
     setSelectedAddress(address);
     setError(null); // Clear any previous errors
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+
+    setIsCouponLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/coupons/validate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code: couponCode,
+          cartAmount: subtotal,
+          items: groupedItems.map(item => ({
+            ...item,
+            product: {
+              ...item.product,
+              category: item.product.categories?.[0] || {
+                _ref: "",
+                _type: "reference"
+              }
+            }
+          }))
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error);
+        setAppliedCoupon(null);
+        return;
+      }
+
+      setAppliedCoupon(data);
+      toast.success("Coupon applied successfully!");
+      setCouponCode("");
+    } catch (error) {
+      setError("Failed to apply coupon");
+      setAppliedCoupon(null);
+    } finally {
+      setIsCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setError(null);
   };
 
   const createCodOrder = async () => {
@@ -70,7 +137,9 @@ export default function CheckoutPage() {
           quantity: item.quantity,
           size: item.size,
         })),
-        totalAmount: subtotal,
+        totalAmount: subtotal - (appliedCoupon?.discount || 0),
+        discountAmount: appliedCoupon?.discount || 0,
+        couponCode: appliedCoupon?.code || null,
         paymentStatus: "cod",
         orderStatus: "pending"
       };
@@ -124,7 +193,7 @@ export default function CheckoutPage() {
         size: item.size,
       }));
 
-      const metadata: Metadata = {
+      const metadata = {
         orderNumber: `ORD-${Date.now()}-${uuidv4().substring(0, 6)}`,
         customerName: user.fullName ?? selectedAddress.fullName ?? "Unknown",
         customerEmail: user.primaryEmailAddress?.emailAddress ?? "Unknown",
@@ -138,7 +207,9 @@ export default function CheckoutPage() {
           zip: selectedAddress.pincode ?? "",
           phoneNumber: selectedAddress.phoneNumber ?? "",
         } as AddressInfo,
-      };
+        discountAmount: appliedCoupon?.discount || 0,
+        couponCode: appliedCoupon?.code || null
+      } as Metadata;
 
       const checkoutUrl = await createCheckoutSession(checkoutItems, metadata);
       
@@ -162,6 +233,8 @@ export default function CheckoutPage() {
     );
   }
 
+  const finalAmount = subtotal - (appliedCoupon?.discount || 0);
+
   return (
     <Container>
       <div className="py-8">
@@ -177,7 +250,7 @@ export default function CheckoutPage() {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <AddressSelector 
                 onSelectAddress={handleSelectAddress}
-                selectedAddressId={selectedAddress?._id}
+                selectedAddress={selectedAddress}
               />
             </div>
 
@@ -239,25 +312,103 @@ export default function CheckoutPage() {
               
               <div className="space-y-4 mb-6">
                 {groupedItems.map((item: CartItem, index: number) => (
-                  <div key={index} className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{item.quantity}×</span>
-                      <span>{item.product.name}</span>
-                      {item.size && (
-                        <span className="text-gray-500">({item.size})</span>
+                  <div key={index} className="flex gap-4">
+                    <div className="relative h-20 w-16 rounded-md overflow-hidden bg-gray-100">
+                      {item.product.images?.[0] && (
+                        <Image
+                          src={urlFor(item.product.images[0]).url()}
+                          alt={item.product.name || "Product image"}
+                          fill
+                          className="object-cover"
+                        />
                       )}
                     </div>
-                    <PriceFormatter amount={(item.product.price || 0) * item.quantity} />
+                    <div className="flex-1">
+                      <div className="flex justify-between">
+                        <div>
+                          <h4 className="font-medium">{item.product.name}</h4>
+                          <p className="text-sm text-gray-500">
+                            Qty: {item.quantity}
+                            {item.size && ` • Size: ${item.size}`}
+                          </p>
+                        </div>
+                        <PriceFormatter 
+                          amount={(item.product.price || 0) * item.quantity} 
+                          className="font-medium"
+                        />
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
 
-              <div className="border-t pt-4 space-y-3">
+              {/* Coupon Section */}
+              <div className="border-t border-b py-4 mb-4">
+                {!appliedCoupon ? (
+                  <div className="space-y-2">
+                    <p className="font-medium flex items-center gap-2">
+                      <Tag size={16} />
+                      Apply Coupon
+                    </p>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Enter coupon code"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button 
+                        onClick={handleApplyCoupon}
+                        disabled={isCouponLoading || !couponCode.trim()}
+                      >
+                        {isCouponLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          'Apply'
+                        )}
+                      </Button>
+                    </div>
+                    {error && (
+                      <p className="text-sm text-red-500">{error}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between bg-green-50 p-2 rounded-md">
+                    <div>
+                      <p className="font-medium text-green-700 flex items-center gap-2">
+                        <Tag size={16} />
+                        {appliedCoupon.code}
+                      </p>
+                      <p className="text-sm text-green-600">
+                        {appliedCoupon.type === 'percentage' 
+                          ? `${appliedCoupon.value}% off`
+                          : `₹${appliedCoupon.value} off`
+                        }
+                      </p>
+                    </div>
+                    <button
+                      onClick={removeCoupon}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
                   <PriceFormatter amount={subtotal} />
                 </div>
                 
+                {appliedCoupon && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount</span>
+                    <span>-<PriceFormatter amount={appliedCoupon.discount} /></span>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span>
                   <span className="font-medium">Free</span>
@@ -265,11 +416,11 @@ export default function CheckoutPage() {
 
                 <div className="flex justify-between font-semibold text-lg border-t pt-3">
                   <span>Total</span>
-                  <PriceFormatter amount={subtotal} className="text-lg" />
+                  <PriceFormatter amount={finalAmount} className="text-lg" />
                 </div>
               </div>
 
-              {error && (
+              {error && !appliedCoupon && (
                 <div className="mt-4 p-3 bg-red-50 text-red-500 rounded-md text-sm">
                   {error}
                 </div>

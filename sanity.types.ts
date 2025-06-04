@@ -472,7 +472,10 @@ export type UserAddress = {
   addressLine1?: string;
   addressLine2?: string;
   city?: string;
-  state?: string;
+  state?: {
+    code: string;
+    title: string;
+  };
   pincode?: string;
   isDefault?: boolean;
   createdAt?: string;

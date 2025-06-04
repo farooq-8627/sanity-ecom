@@ -9,9 +9,12 @@ import Stripe from "stripe";
 export interface AddressInfo {
   name: string;
   address: string;
-  addressLine2?: string;
+  addressLine2: string;
   city: string;
-  state: string;
+  state: {
+    code: string;
+    title: string;
+  };
   zip: string;
   phoneNumber: string;
 }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Container from "@/components/Container";
 import Title from "@/components/Title";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
-import { UserAddress } from "@/sanity.types";
+import { UserAddress } from "@/types";
 import AddressCard from "@/components/address/AddressCard";
 
 export default function AddressesPage() {
@@ -90,7 +90,7 @@ export default function AddressesPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {addresses.map((address) => (
               <AddressCard
-                key={address._id}
+                key={address._key}
                 address={address}
               />
             ))}

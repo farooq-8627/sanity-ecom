@@ -1,10 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { UserAddress } from "@/sanity.types";
+import { UserAddress } from "@/types";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Edit, Trash2, MapPin, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/card";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface AddressCardProps {
   address: UserAddress;
@@ -12,7 +15,7 @@ interface AddressCardProps {
   isSelected?: boolean;
   isSelectable?: boolean;
   onEdit?: (address: UserAddress) => void;
-  onDelete?: (addressId: string) => void;
+  onDelete?: (key: string) => void;
   isManageable?: boolean;
 }
 
@@ -25,6 +28,7 @@ const AddressCard: React.FC<AddressCardProps> = ({
   onDelete,
   isManageable = true,
 }) => {
+  console.log('AddressCard received address:', JSON.stringify(address, null, 2));
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -33,7 +37,7 @@ const AddressCard: React.FC<AddressCardProps> = ({
     if (onEdit) {
       onEdit(address);
     } else {
-      router.push(`/account/addresses/edit?id=${address._id}&checkout=true`);
+      router.push(`/account/addresses/edit/${address._key}&checkout=true`);
     }
   };
 
@@ -43,10 +47,10 @@ const AddressCard: React.FC<AddressCardProps> = ({
       setIsDeleting(true);
 
       if (onDelete) {
-        onDelete(address._id);
+        onDelete(address._key);
       } else {
         try {
-          const response = await fetch(`/api/addresses?id=${address._id}`, {
+          const response = await fetch(`/api/addresses?key=${address._key}`, {
             method: "DELETE",
           });
 
@@ -72,71 +76,53 @@ const AddressCard: React.FC<AddressCardProps> = ({
   };
 
   return (
-    <div 
-      className={`border rounded-lg relative transition-all ${
-        isSelected 
-          ? "border-shop_dark_green ring-1 ring-shop_dark_green bg-shop_light_bg/5" 
-          : "border-gray-200 hover:border-gray-300"
-      } ${isSelectable ? "cursor-pointer" : ""}`}
+    <Card
+      className={cn(
+        "p-4 relative",
+        isSelectable && "cursor-pointer hover:border-primary transition-colors",
+        isSelected && "border-primary"
+      )}
       onClick={isSelectable ? handleSelect : undefined}
     >
-      <div className="p-5">
         <div className="flex justify-between items-start">
-          <div className="flex items-start gap-3">
-            {isSelectable && (
-              <div className="mt-1">
-                <input
-                  type="radio"
-                  className="h-4 w-4 text-shop_dark_green focus:ring-shop_dark_green border-gray-300"
-                  checked={isSelected}
-                  onChange={handleSelect}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-            )}
             <div>
-              <div className="flex items-center gap-3 mb-2">
-                <h3 className="font-medium text-gray-900">{address.addressName}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-medium">{address.addressName}</h3>
                 {address.isDefault && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-shop_dark_green/10 text-shop_dark_green">
+              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
                     Default
                   </span>
                 )}
               </div>
-              
-              <div className="space-y-1 text-sm text-gray-500">
-                <p className="font-medium text-gray-900">{address.fullName}</p>
-                <p>{address.addressLine1}</p>
-                {address.addressLine2 && <p>{address.addressLine2}</p>}
-                <p>
-                  {address.city}, {address.state} - {address.pincode}
+          <p className="text-sm text-gray-600 mt-1">{address.fullName}</p>
+          <p className="text-sm text-gray-600">{address.phoneNumber}</p>
+          <p className="text-sm text-gray-600 mt-2">
+            {address.addressLine1}
+            {address.addressLine2 && <>, {address.addressLine2}</>}
                 </p>
-                <p className="flex items-center gap-1">
-                  <span className="font-medium text-gray-700">Phone:</span>
-                  {address.phoneNumber}
+          <p className="text-sm text-gray-600">
+            {address.city}, {address.state.title} - {address.pincode}
                 </p>
-              </div>
-            </div>
           </div>
 
-          <div className="flex items-start gap-1">
+        {isManageable && (
+          <div className="flex gap-2">
             <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 hover:bg-gray-100"
-              onClick={handleEdit}
-              title="Edit address"
+              variant="outline"
+              size="icon"
+              asChild
+              className="h-8 w-8"
             >
-              <Edit className="h-4 w-4 text-gray-500" />
+              <Link href={`/account/addresses/edit/${address._key}`}>
+                <Edit className="h-4 w-4" />
+              </Link>
             </Button>
-            {isManageable && (
               <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0 hover:bg-red-50"
+              variant="outline"
+              size="icon"
+              className="h-8 w-8"
                 onClick={handleDelete}
                 disabled={isDeleting}
-                title="Delete address"
               >
                 {isDeleting ? (
                   <Loader2 className="h-4 w-4 animate-spin text-gray-500" />
@@ -144,11 +130,10 @@ const AddressCard: React.FC<AddressCardProps> = ({
                   <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-500" />
                 )}
               </Button>
-            )}
           </div>
-        </div>
+        )}
       </div>
-    </div>
+    </Card>
   );
 };
 

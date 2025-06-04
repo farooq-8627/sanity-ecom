@@ -11,9 +11,8 @@ import { authorType } from "./authorType";
 import { addressType } from "./addressType";
 import { productReelType } from "./productReelType";
 import productVariantType from "./productVariantType";
-import userCart from "../schemas/userCart";
-import userWishlist from "../schemas/userWishlist";
-import userAddress from "../schemas/userAddress";
+import userAddresses from "../schemas/userAddress";
+import { couponType } from "./couponType";
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -29,8 +28,7 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     addressType,
     productReelType,
     productVariantType,
-    userCart as SchemaTypeDefinition,
-    userWishlist as SchemaTypeDefinition,
-    userAddress as SchemaTypeDefinition,
+    userAddresses as SchemaTypeDefinition,
+    couponType,
   ],
 };
