@@ -1,12 +1,6 @@
-import "../globals.css";
+'use client';
+
 import { Toaster } from "react-hot-toast";
-import { siteConfig } from "@/constants/data";
-
-export const metadata = {
-  title: `Sanity Studio for ${siteConfig.name}`,
-  description: `Content Management for ${siteConfig.seo.title}`,
-
-}
 
 export default function StudioLayout({
   children,
@@ -14,19 +8,18 @@ export default function StudioLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
-        {children}
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            style: {
-              background: "#000000",
-              color: "#fff",
-            },
-          }}
-        />
-      </body>
-    </html>
+    <div className="studio-layout">
+      {children}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#333',
+            color: '#fff',
+          },
+        }}
+      />
+    </div>
   );
 } 
