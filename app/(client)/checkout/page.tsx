@@ -251,6 +251,8 @@ export default function CheckoutPage() {
               <AddressSelector 
                 onSelectAddress={handleSelectAddress}
                 selectedAddress={selectedAddress}
+                showAddButton={true}
+                isCheckout={true}
               />
             </div>
 
@@ -420,11 +422,11 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {error && !appliedCoupon && (
+              {/* {error && !appliedCoupon && (
                 <div className="mt-4 p-3 bg-red-50 text-red-500 rounded-md text-sm">
                   {error}
                 </div>
-              )}
+              )} */}
 
               <Button 
                 className="w-full mt-6" 

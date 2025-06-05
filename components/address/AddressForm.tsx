@@ -89,7 +89,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
       const url = "/api/addresses";
       const method = address?._key ? "PATCH" : "POST";
       const body = address?._key 
-        ? JSON.stringify({ ...formData, addressId: address._key })
+        ? JSON.stringify({ ...formData, addressKey: address._key })
         : JSON.stringify(formData);
 
       const response = await fetch(url, {
@@ -104,10 +104,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
         throw new Error("Failed to save address");
       }
 
-      // Refresh the page data
-      router.refresh();
-      
-      // Call success callback or navigate
+      // Call success callback or navigate to checkout
       if (onSuccess) {
         onSuccess();
       } else {

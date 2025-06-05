@@ -16,22 +16,20 @@ export async function GET() {
 
     const addresses = await client.fetch(
       `*[_type == "userAddresses" && clerkUserId == $userId][0]{
+        _id,
         addresses
       }`,
       { userId: session.userId },
-      {
-        cache: 'force-cache',
-        next: { revalidate: 60 } // Cache for 60 seconds
-      }
+      { cache: 'no-store' }  // Disable caching to always get fresh data
     );
 
     if (!addresses) {
       return NextResponse.json({ addresses: [] });
     }
-
-    return NextResponse.json(addresses, {
+    
+    return NextResponse.json({ addresses: addresses.addresses || [] }, {
       headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300'
+        'Cache-Control': 'no-store, must-revalidate'
       }
     });
   } catch (error) {

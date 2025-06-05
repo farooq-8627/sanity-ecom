@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AddressSelectorSkeleton from "@/components/skeletons/AddressSelectorSkeleton";
+import { Plus } from "lucide-react";
 
 interface AddressSelectorProps {
   onSelectAddress: (address: UserAddress | null) => void;
@@ -29,55 +30,36 @@ export function AddressSelector({
     selectedAddress?._key || null
   );
 
-  // Use a ref to track if we've already loaded addresses
-  const addressesLoadedRef = React.useRef(false);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function fetchAddresses() {
-      // Skip if we've already loaded addresses
-      if (addressesLoadedRef.current) return;
-
-      try {
-        setIsLoading(true);
-        const response = await fetch("/api/addresses");
-        
-        if (!response.ok) {
-          throw new Error("Failed to fetch addresses");
-        }
-
-        const data = await response.json();
-        
-        if (isMounted) {
-          setAddresses(data.addresses);
-          addressesLoadedRef.current = true;
-        
-          // Only set default address if no address is currently selected
-          if (data.addresses.length > 0 && !selectedAddress) {
-            const defaultAddress = data.addresses.find((addr: UserAddress) => addr.isDefault) || data.addresses[0];
-            onSelectAddress(defaultAddress);
-            setSelectedAddressKey(defaultAddress._key);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching addresses:", error);
-        if (isMounted) {
-          setError("Failed to load addresses");
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+  const fetchAddresses = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch("/api/addresses");
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch addresses");
       }
+
+      const data = await response.json();
+      setAddresses(data.addresses || []);
+      
+      // Only set default address if no address is currently selected
+      if (data.addresses?.length > 0 && !selectedAddress) {
+        const defaultAddress = data.addresses.find((addr: UserAddress) => addr.isDefault) || data.addresses[0];
+        onSelectAddress(defaultAddress);
+        setSelectedAddressKey(defaultAddress._key);
+      }
+    } catch (error) {
+      console.error("Error fetching addresses:", error);
+      setError("Failed to load addresses");
+    } finally {
+      setIsLoading(false);
     }
+  };
 
+  // Only fetch addresses on initial mount
+  useEffect(() => {
     fetchAddresses();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [onSelectAddress, selectedAddress]);
+  }, []); // Empty dependency array means this only runs once on mount
 
   const handleDeleteAddress = async (addressKey: string) => {
     try {
@@ -86,25 +68,31 @@ export function AddressSelector({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to delete address");
+        const data = await response.json();
+        throw new Error(data.error || "Failed to delete address");
       }
 
-      // Update addresses list
+      // Update local state instead of fetching again
       const updatedAddresses = addresses.filter(addr => addr._key !== addressKey);
       setAddresses(updatedAddresses);
 
       // If the deleted address was selected, select a new default
       if (selectedAddressKey === addressKey) {
-        const newDefaultAddress = updatedAddresses.find(addr => addr.isDefault) || updatedAddresses[0];
+        const newDefaultAddress = updatedAddresses.find(addr => addr.isDefault) 
+          || updatedAddresses[0];
         onSelectAddress(newDefaultAddress || null);
         setSelectedAddressKey(newDefaultAddress?._key || null);
       }
-
-      // Reset the loaded flag so we'll fetch fresh data next time
-      addressesLoadedRef.current = false;
     } catch (error) {
       console.error("Error deleting address:", error);
+      setError(error instanceof Error ? error.message : "Failed to delete address");
+      setTimeout(() => setError(null), 3000);
     }
+  };
+
+  const handleSelectAddress = (address: UserAddress) => {
+    setSelectedAddressKey(address._key);
+    onSelectAddress(address);
   };
 
   if (isLoading) {
@@ -126,35 +114,32 @@ export function AddressSelector({
     );
   }
 
-  if (addresses.length === 0) {
-  return (
-      <div className="text-center">
-        <p className="mb-4">No addresses found.</p>
-        {showAddButton && (
-          <Button asChild>
-            <Link href={`/account/addresses/add${isCheckout ? "?checkout=true" : ""}`}>
-          Add New Address
-            </Link>
-        </Button>
-        )}
-      </div>
-    );
-  }
-
-  const handleSelectAddress = (address: UserAddress) => {
-    setSelectedAddressKey(address._key);
-    onSelectAddress(address);
-  };
-
   return (
     <div className="space-y-4">
       {showAddButton && (
-        <div className="flex justify-end">
-          <Button asChild>
-            <Link href={`/account/addresses/add${isCheckout ? "?checkout=true" : ""}`}>
-              Add New Address
-            </Link>
-          </Button>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0 mb-6">
+        <div>
+          <h2 className="text-xl md:text-2xl font-semibold">Select Delivery Address</h2>
+          <p className="text-sm text-gray-500 mt-1">
+            Choose an address for delivery or add a new one
+          </p>
+        </div>
+        <Button 
+          onClick={() => router.push(`/account/addresses/add?${isCheckout ? "checkout=true" : ""}`)}
+          className="flex items-center gap-2 bg-white w-full md:w-auto"
+          variant="outline"
+          size="default"
+        >
+          <Plus className="h-5 w-5" />
+          Add New Address
+        </Button>
+      </div>
+      )}
+      {addresses.length === 0 && (
+        <div className="text-center py-12 md:py-16 px-4 border rounded-lg border-dashed bg-gray-50">
+          <div className="max-w-sm mx-auto">
+            <p className="text-gray-600 mb-4">You don't have any saved addresses yet. Add a new address to get started.</p>
+          </div>
         </div>
       )}
         <div className="grid gap-4">
