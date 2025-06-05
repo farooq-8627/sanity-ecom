@@ -98,6 +98,7 @@ export interface UserAddresses {
 
 // Order Types
 export interface OrderItem {
+  _key: string;
   product: {
     _ref: string;
     _type: 'reference';
@@ -105,6 +106,20 @@ export interface OrderItem {
   quantity: number;
   size?: string;
   price: number;
+}
+
+// PhonePe Payment Details Type
+export interface PhonePePaymentDetails {
+  merchantTransactionId: string;
+  transactionId: string;
+  paymentInstrument: {
+    type: string;
+    accountHolderName: string;
+    accountType: string;
+    cardNetwork: string | null;
+    upiTransactionId: string;
+    utr: string;
+  };
 }
 
 export interface Order {
@@ -125,12 +140,12 @@ export interface Order {
   };
   items: OrderItem[];
   totalAmount: number;
-  discountAmount?: number;
-  couponCode?: string;
+  discountAmount: number;
+  couponCode: string | null;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'cod';
-  orderStatus: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  paymentIntentId?: string;
-  shippingTrackingId?: string;
+  orderStatus: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  paymentMethod: 'phonepe' | 'cod';
+  paymentDetails?: PhonePePaymentDetails;
   createdAt: string;
   updatedAt: string;
 }
@@ -202,6 +217,120 @@ export const schemaTypes: SchemaTypeDefinition[] = [
       { name: 'image', type: 'image', title: 'Image', options: { hotspot: true }, validation: (Rule) => Rule.required() },
       { name: 'isActive', type: 'boolean', title: 'Is Active', initialValue: true },
       { name: 'priority', type: 'number', title: 'Priority', validation: (Rule) => Rule.required().integer() }
+    ]
+  },
+  {
+    name: 'order',
+    title: 'Orders',
+    type: 'document',
+    fields: [
+      { name: 'orderNumber', type: 'string', title: 'Order Number', validation: (Rule) => Rule.required() },
+      { name: 'customerName', type: 'string', title: 'Customer Name', validation: (Rule) => Rule.required() },
+      { name: 'customerEmail', type: 'string', title: 'Customer Email', validation: (Rule) => Rule.required() },
+      { name: 'clerkUserId', type: 'string', title: 'Clerk User ID', validation: (Rule) => Rule.required() },
+      {
+        name: 'address',
+        type: 'object',
+        title: 'Shipping Address',
+        fields: [
+          { name: 'name', type: 'string', title: 'Full Name' },
+          { name: 'address', type: 'string', title: 'Address' },
+          { name: 'addressLine2', type: 'string', title: 'Address Line 2' },
+          { name: 'city', type: 'string', title: 'City' },
+          { name: 'state', type: 'string', title: 'State' },
+          { name: 'zip', type: 'string', title: 'ZIP Code' },
+          { name: 'phoneNumber', type: 'string', title: 'Phone Number' }
+        ]
+      },
+      {
+        name: 'items',
+        type: 'array',
+        title: 'Order Items',
+        of: [{
+          type: 'object',
+          fields: [
+            { 
+              name: '_key', 
+              type: 'string',
+              title: 'Key',
+              validation: (Rule) => Rule.required(),
+              initialValue: () => `item_${Date.now()}`
+            },
+            { name: 'product', type: 'reference', to: [{ type: 'product' }] },
+            { name: 'quantity', type: 'number' },
+            { name: 'size', type: 'string' },
+            { name: 'price', type: 'number' }
+          ]
+        }]
+      },
+      { name: 'totalAmount', type: 'number', title: 'Total Amount', validation: (Rule) => Rule.required() },
+      { name: 'discountAmount', type: 'number', title: 'Discount Amount', initialValue: 0 },
+      { name: 'couponCode', type: 'string', title: 'Coupon Code' },
+      {
+        name: 'paymentStatus',
+        type: 'string',
+        title: 'Payment Status',
+        options: {
+          list: [
+            { title: 'Pending', value: 'pending' },
+            { title: 'Paid', value: 'paid' },
+            { title: 'Failed', value: 'failed' },
+            { title: 'COD', value: 'cod' }
+          ]
+        },
+        validation: (Rule) => Rule.required()
+      },
+      {
+        name: 'orderStatus',
+        type: 'string',
+        title: 'Order Status',
+        options: {
+          list: [
+            { title: 'Pending', value: 'pending' },
+            { title: 'Confirmed', value: 'confirmed' },
+            { title: 'Shipped', value: 'shipped' },
+            { title: 'Delivered', value: 'delivered' },
+            { title: 'Cancelled', value: 'cancelled' }
+          ]
+        },
+        validation: (Rule) => Rule.required()
+      },
+      {
+        name: 'paymentMethod',
+        type: 'string',
+        title: 'Payment Method',
+        options: {
+          list: [
+            { title: 'PhonePe', value: 'phonepe' },
+            { title: 'Cash on Delivery', value: 'cod' }
+          ]
+        },
+        validation: (Rule) => Rule.required()
+      },
+      {
+        name: 'paymentDetails',
+        type: 'object',
+        title: 'Payment Details',
+        fields: [
+          { name: 'merchantTransactionId', type: 'string', title: 'Merchant Transaction ID' },
+          { name: 'transactionId', type: 'string', title: 'Transaction ID' },
+          {
+            name: 'paymentInstrument',
+            type: 'object',
+            title: 'Payment Instrument',
+            fields: [
+              { name: 'type', type: 'string', title: 'Type' },
+              { name: 'accountHolderName', type: 'string', title: 'Account Holder Name' },
+              { name: 'accountType', type: 'string', title: 'Account Type' },
+              { name: 'cardNetwork', type: 'string', title: 'Card Network', },
+              { name: 'upiTransactionId', type: 'string', title: 'UPI Transaction ID' },
+              { name: 'utr', type: 'string', title: 'UTR' }
+            ]
+          }
+        ]
+      },
+      { name: 'createdAt', type: 'datetime', title: 'Created At' },
+      { name: 'updatedAt', type: 'datetime', title: 'Updated At' }
     ]
   }
 ];

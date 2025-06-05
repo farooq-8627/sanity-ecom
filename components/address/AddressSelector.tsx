@@ -30,31 +30,31 @@ export function AddressSelector({
     selectedAddress?._key || null
   );
 
-  const fetchAddresses = async () => {
+    const fetchAddresses = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch("/api/addresses");
+        const response = await fetch("/api/addresses");
       
-      if (!response.ok) {
-        throw new Error("Failed to fetch addresses");
-      }
+        if (!response.ok) {
+          throw new Error("Failed to fetch addresses");
+        }
 
-      const data = await response.json();
-      setAddresses(data.addresses || []);
-      
+        const data = await response.json();
+        setAddresses(data.addresses || []);
+        
       // Only set default address if no address is currently selected
       if (data.addresses?.length > 0 && !selectedAddress) {
-        const defaultAddress = data.addresses.find((addr: UserAddress) => addr.isDefault) || data.addresses[0];
-        onSelectAddress(defaultAddress);
+          const defaultAddress = data.addresses.find((addr: UserAddress) => addr.isDefault) || data.addresses[0];
+          onSelectAddress(defaultAddress);
         setSelectedAddressKey(defaultAddress._key);
-      }
-    } catch (error) {
-      console.error("Error fetching addresses:", error);
+        }
+      } catch (error) {
+        console.error("Error fetching addresses:", error);
       setError("Failed to load addresses");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
   // Only fetch addresses on initial mount
   useEffect(() => {
@@ -117,7 +117,7 @@ export function AddressSelector({
   return (
     <div className="space-y-4">
       {showAddButton && (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0 mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0 mb-6">
         <div>
           <h2 className="text-xl md:text-2xl font-semibold">Select Delivery Address</h2>
           <p className="text-sm text-gray-500 mt-1">

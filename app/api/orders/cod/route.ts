@@ -46,9 +46,11 @@ export async function POST(req: NextRequest) {
         price: item.product.price,
       })),
       totalAmount: orderData.totalAmount,
-      paymentStatus: 'cod',
-      paymentMethod: 'cod',
-      orderStatus: 'pending',
+      discountAmount: orderData.discountAmount || 0,
+      couponCode: orderData.couponCode || null,
+      paymentStatus: "cod",
+      orderStatus: "confirmed",
+      paymentMethod: "cod",
       createdAt: new Date().toISOString(),
     });
 

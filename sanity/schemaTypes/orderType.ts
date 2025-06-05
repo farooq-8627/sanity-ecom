@@ -22,20 +22,13 @@ export const orderType = defineType({
         { name: "email", type: "string", title: "Email" },
         { name: "clerkUserId", type: "string", title: "Clerk User ID" },
       ],
-      validation: (Rule) => Rule.required(),
-    }),
-    defineField({
-      name: "items",
-      title: "Order Items",
-      type: "array",
-      of: [{ type: "orderItem" }],
     }),
     defineField({
       name: "shippingAddress",
       title: "Shipping Address",
       type: "object",
       fields: [
-        { name: "name", type: "string", title: "Name" },
+        { name: "name", type: "string", title: "Full Name" },
         { name: "address", type: "string", title: "Address" },
         { name: "addressLine2", type: "string", title: "Address Line 2" },
         { name: "city", type: "string", title: "City" },
@@ -45,26 +38,40 @@ export const orderType = defineType({
       ],
     }),
     defineField({
+      name: "items",
+      title: "Order Items",
+      type: "array",
+      of: [{ type: "orderItem" }],
+      validation: (Rule) => Rule.required().min(1),
+    }),
+    defineField({
       name: "totalAmount",
       title: "Total Amount",
       type: "number",
       validation: (Rule) => Rule.required(),
     }),
     defineField({
+      name: "discountAmount",
+      title: "Discount Amount",
+      type: "number",
+      initialValue: 0,
+    }),
+    defineField({
+      name: "couponCode",
+      title: "Coupon Code",
+      type: "string",
+    }),
+    defineField({
       name: "paymentStatus",
       title: "Payment Status",
       type: "string",
       options: {
-        list: ["pending", "paid", "cod", "failed", "refunded"],
-      },
-      validation: (Rule) => Rule.required(),
-    }),
-    defineField({
-      name: "paymentMethod",
-      title: "Payment Method",
-      type: "string",
-      options: {
-        list: ["stripe", "cod"],
+        list: [
+          { title: "Pending", value: "pending" },
+          { title: "Paid", value: "paid" },
+          { title: "Failed", value: "failed" },
+          { title: "COD", value: "cod" },
+        ],
       },
       validation: (Rule) => Rule.required(),
     }),
@@ -73,121 +80,62 @@ export const orderType = defineType({
       title: "Order Status",
       type: "string",
       options: {
-        list: ["pending", "processing", "shipped", "delivered", "cancelled"],
+        list: [
+          { title: "Pending", value: "pending" },
+          { title: "Confirmed", value: "confirmed" },
+          { title: "Shipped", value: "shipped" },
+          { title: "Delivered", value: "delivered" },
+          { title: "Cancelled", value: "cancelled" },
+        ],
       },
       validation: (Rule) => Rule.required(),
     }),
     defineField({
-      name: "tracking",
-      title: "Tracking Information",
+      name: "paymentMethod",
+      title: "Payment Method",
+      type: "string",
+      options: {
+        list: [
+          { title: "PhonePe", value: "phonepe" },
+          { title: "Cash on Delivery", value: "cod" },
+        ],
+      },
+      validation: (Rule) => Rule.required(),
+    }),
+    defineField({
+      name: "paymentDetails",
+      title: "Payment Details",
       type: "object",
       fields: [
-        {
-          name: "carrier",
-          type: "string",
-          title: "Shipping Carrier",
-          options: {
-            list: [
-              "DTDC",
-              "Delhivery",
-              "BlueDart",
-              "FedEx",
-              "IndiaPost",
-              "Other"
-            ],
-          },
+        { 
+          name: "merchantTransactionId", 
+          type: "string", 
+          title: "Merchant Transaction ID"
+        },
+        { 
+          name: "transactionId", 
+          type: "string", 
+          title: "Transaction ID"
         },
         {
-          name: "trackingNumber",
-          type: "string",
-          title: "Tracking Number"
-        },
-        {
-          name: "trackingUrl",
-          type: "url",
-          title: "Tracking URL"
-        },
-        {
-          name: "estimatedDelivery",
-          type: "date",
-          title: "Estimated Delivery Date"
-        },
-        {
-          name: "updates",
-          type: "array",
-          title: "Status Updates",
-          of: [{
-            type: "object",
-            fields: [
-              {
-                name: "status",
-                type: "string",
-                title: "Status",
-                options: {
-                  list: [
-                    "Order Placed",
-                    "Order Confirmed",
-                    "Processing",
-                    "Packed",
-                    "Shipped",
-                    "Out for Delivery",
-                    "Delivered",
-                    "Delayed",
-                    "Failed Delivery Attempt",
-                    "Exception"
-                  ]
-                }
-              },
-              {
-                name: "location",
-                type: "string",
-                title: "Location"
-              },
-              {
-                name: "timestamp",
-                type: "datetime",
-                title: "Timestamp"
-              },
-              {
-                name: "description",
-                type: "text",
-                title: "Description"
-              }
-            ]
-          }]
+          name: "paymentInstrument",
+          type: "object",
+          title: "Payment Instrument",
+          fields: [
+            { name: "type", type: "string", title: "Type" },
+            { name: "accountHolderName", type: "string", title: "Account Holder Name" },
+            { name: "accountType", type: "string", title: "Account Type" },
+            { name: "cardNetwork", type: "string", title: "Card Network" },
+            { name: "upiTransactionId", type: "string", title: "UPI Transaction ID" },
+            { name: "utr", type: "string", title: "UTR" }
+          ]
         }
       ]
-    }),
-    defineField({
-      name: "stripeCheckoutId",
-      title: "Stripe Checkout ID",
-      type: "string",
-    }),
-    defineField({
-      name: "stripePaymentIntentId",
-      title: "Stripe Payment Intent ID",
-      type: "string",
-    }),
-    defineField({
-      name: "stripeCustomerId",
-      title: "Stripe Customer ID",
-      type: "string",
-    }),
-    defineField({
-      name: "stripeInvoiceId",
-      title: "Stripe Invoice ID",
-      type: "string",
-    }),
-    defineField({
-      name: "stripeInvoiceUrl",
-      title: "Stripe Invoice URL",
-      type: "string",
     }),
     defineField({
       name: "createdAt",
       title: "Created At",
       type: "datetime",
-      validation: (Rule) => Rule.required(),
     }),
     defineField({
       name: "updatedAt",
@@ -197,18 +145,8 @@ export const orderType = defineType({
   ],
   preview: {
     select: {
-      name: "customer.name",
-      amount: "totalAmount",
-      orderId: "orderNumber",
-      email: "customer.email",
-    },
-    prepare(select) {
-      const orderIdSnippet = `${select.orderId.slice(0, 5)}...${select.orderId.slice(-5)}`;
-      return {
-        title: `${select.name} (${orderIdSnippet})`,
-        subtitle: `${select.amount}`,
-        media: BasketIcon,
-      };
+      title: 'orderNumber',
+      subtitle: 'orderStatus',
     },
   },
 });

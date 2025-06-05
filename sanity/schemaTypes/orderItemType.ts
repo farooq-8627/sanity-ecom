@@ -1,40 +1,43 @@
-import { defineType, defineField } from "sanity";
+import { defineType } from "sanity";
 
 export const orderItemType = defineType({
   name: "orderItem",
   title: "Order Item",
   type: "object",
   fields: [
-    defineField({
+    {
       name: "product",
+      title: "Product",
       type: "reference",
       to: [{ type: "product" }],
-    }),
-    defineField({
+    },
+    {
       name: "quantity",
+      title: "Quantity",
       type: "number",
-    }),
-    defineField({
+    },
+    {
       name: "size",
+      title: "Size",
       type: "string",
-    }),
-    defineField({
+    },
+    {
       name: "price",
+      title: "Price",
       type: "number",
-    }),
+    }
   ],
   preview: {
     select: {
-      productName: 'product.name',
+      title: 'product.name',
       quantity: 'quantity',
-      size: 'size',
+      price: 'price'
     },
-    prepare(selection) {
-      const { productName, quantity, size } = selection;
+    prepare({ title, quantity, price }) {
       return {
-        title: productName || 'No Product Name',
-        subtitle: `Qty: ${quantity}${size ? `, Size: ${size}` : ''}`
-      };
-    },
-  },
+        title: title || 'No product name',
+        subtitle: `Qty: ${quantity || 0} • Price: ₹${price || 0}`
+      }
+    }
+  }
 }); 

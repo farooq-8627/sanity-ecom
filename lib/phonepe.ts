@@ -2,163 +2,158 @@ import axios from 'axios';
 import { Buffer } from 'buffer';
 import { createHash } from 'crypto';
 
-// Test credentials for PhonePe sandbox
-const MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID || "PGTESTPAYUAT";
-const SALT_KEY = process.env.PHONEPE_SALT_KEY || "099eb0cd-02cf-4e2a-8aca-3e6c6aff0399";
-const SALT_INDEX = 1;
-
-// PhonePe API URLs
-const API_URL = process.env.NODE_ENV === 'production'
-  ? 'https://api.phonepe.com/apis/hermes'
-  : 'https://api-preprod.phonepe.com/apis/pg-sandbox';
-
-// Base URL for your application
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+// PhonePe API configuration
+const MERCHANT_ID = process.env.NEXT_PUBLIC_MERCHANT_ID || 'PGTESTPAYUAT86';
+const SALT_KEY = process.env.NEXT_PUBLIC_SALT_KEY || '96434309-7796-489d-8924-ab56988a6076';
+const SALT_INDEX = '1';
+const API_URL = process.env.NEXT_PUBLIC_PHONE_PAY_HOST_URL || 'https://api-preprod.phonepe.com/apis/pg-sandbox';
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 2000; // 2 seconds
 
 // Helper function to generate checksum
-const generateChecksum = (payload: string, apiEndpoint: string): string => {
-  const string = `${payload}${apiEndpoint}${SALT_KEY}`;
+export const generateChecksum = (payload: string, apiEndpoint: string) => {
+  // For status check, include merchant ID in the string
+  const string = apiEndpoint.includes('/status/') 
+    ? `/pg/v1/status/${MERCHANT_ID}/${payload}${SALT_KEY}`
+    : payload + apiEndpoint + SALT_KEY;
   const sha256 = createHash('sha256').update(string).digest('hex');
-  return `${sha256}###${SALT_INDEX}`;
+  return sha256 + '###' + SALT_INDEX;
 };
 
-interface PhonePePaymentResponse {
-  success: boolean;
-  code: string;
-  message: string;
-  data?: {
-    merchantId: string;
-    merchantTransactionId: string;
-    instrumentResponse: {
-      type: string;
-      redirectInfo: {
-        url: string;
-        method: string;
-      };
+// Helper function to generate unique transaction ID
+export const generateTransactionId = () => {
+  return `TXN_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     };
+
+// Helper function to handle API errors
+const handleApiError = (error: any) => {
+  if (axios.isAxiosError(error)) {
+    const response = error.response?.data;
+    return {
+      success: false,
+      error: response?.message || response?.error || 'Payment service error',
+      code: response?.code || error.response?.status
+    };
+  }
+  return {
+    success: false,
+    error: error.message || 'Unknown error occurred',
+    code: 'UNKNOWN_ERROR'
   };
-}
+};
 
-export interface PaymentInitiateRequest {
-  amount: number;
-  orderId: string;
-  userId: string;
-  userEmail: string;
-  userName: string;
-  callbackUrl: string;
-  redirectUrl: string;
-}
-
-export const initiatePhonePePayment = async (request: PaymentInitiateRequest) => {
+// Function to initiate payment
+export const initiatePhonePePayment = async (amount: number, orderId: string, userId: string) => {
   try {
     const payload = {
       merchantId: MERCHANT_ID,
-      merchantTransactionId: request.orderId,
-      merchantUserId: request.userId,
-      amount: request.amount * 100,
-      redirectUrl: `${BASE_URL}/success?order_id=${request.orderId}`,
-      redirectMode: "REDIRECT",
-      callbackUrl: `${BASE_URL}/api/webhook/phonepe`,
+      merchantTransactionId: orderId,
+      merchantUserId: userId,
+      amount: amount * 100, // Convert to paise
+      redirectUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout/status/${orderId}`,
+      redirectMode: 'REDIRECT',
+      callbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/payments/callback`,
       paymentInstrument: {
-        type: "PAY_PAGE"
-      },
-      // Add test mode flag for sandbox
-      _testMode: true
+        type: 'PAY_PAGE'
+      }
     };
 
     const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64');
-    const apiEndpoint = "/pg/v1/pay";
-    const checksum = generateChecksum(base64Payload, apiEndpoint);
+    const checksum = generateChecksum(base64Payload, '/pg/v1/pay');
     
-    const response = await axios.post<PhonePePaymentResponse>(
-      `${API_URL}${apiEndpoint}`,
+    const response = await axios.post(
+      `${API_URL}/pg/v1/pay`,
       {
         request: base64Payload
       },
       {
         headers: {
           'Content-Type': 'application/json',
-          'X-VERIFY': checksum
+          'X-VERIFY': checksum,
+          'Accept': 'application/json'
         }
       }
     );
 
-    if (response.data.success) {
+    const { success, code, data } = response.data;
+
+    if (!success || code !== 'PAYMENT_INITIATED') {
+      throw new Error(data?.message || 'Payment initiation failed');
+    }
+
       return {
         success: true,
-        redirectUrl: response.data.data?.instrumentResponse.redirectInfo.url
+      data: data
       };
-    } else {
-      throw new Error(response.data.message);
-    }
   } catch (error) {
     console.error('PhonePe payment initiation error:', error);
-    throw error;
+    return handleApiError(error);
   }
 };
 
-export const verifyPaymentStatus = async (merchantTransactionId: string) => {
+// Function to check payment status with retries
+export const checkPaymentStatus = async (transactionId: string, retryCount = 0): Promise<any> => {
   try {
-    // For test environment, we'll simulate a successful payment
-    if (process.env.NODE_ENV !== 'production') {
-      return {
-        success: true,
-        data: {
-          merchantId: MERCHANT_ID,
-          merchantTransactionId: merchantTransactionId,
-          transactionId: `TEST_${Date.now()}`,
-          amount: 100,
-          state: "COMPLETED",
-          responseCode: "SUCCESS",
-          paymentInstrument: {
-            type: "UPI",
-            utr: `TEST_UTR_${Date.now()}`
-          }
-        }
-      };
-    }
-
-    const apiEndpoint = `/pg/v1/status/${MERCHANT_ID}/${merchantTransactionId}`;
-    const checksum = generateChecksum("", apiEndpoint);
+    const endpoint = `/pg/v1/status/${MERCHANT_ID}/${transactionId}`;
+    const checksum = generateChecksum(transactionId, endpoint);
 
     const response = await axios.get(
-      `${API_URL}${apiEndpoint}`,
+      `${API_URL}${endpoint}`,
       {
         headers: {
           'Content-Type': 'application/json',
           'X-VERIFY': checksum,
-          'X-MERCHANT-ID': MERCHANT_ID
+          'X-MERCHANT-ID': MERCHANT_ID,
+          'Accept': 'application/json'
         }
       }
     );
 
+    const { success, code, data } = response.data;
+    
+    // If payment is still pending and we haven't exceeded max retries
+    if (code === 'PAYMENT_PENDING' && retryCount < MAX_RETRIES) {
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      return checkPaymentStatus(transactionId, retryCount + 1);
+    }
+
+    if (success && code === 'PAYMENT_SUCCESS') {
     return {
       success: true,
-      data: response.data
-    };
-  } catch (error: any) {
-    console.error('PhonePe payment status check error:', error);
-    
-    if (error.response?.status === 401) {
+        data: {
+          merchantId: data.merchantId,
+          merchantTransactionId: data.merchantTransactionId,
+          transactionId: data.transactionId,
+          amount: data.amount,
+          paymentInstrument: data.paymentInstrument
+        }
+      };
+    }
+
+    // Handle specific error codes
+    if (code === 'PAYMENT_ERROR' || code === 'PAYMENT_DECLINED') {
       return {
         success: false,
-        error: "Payment verification failed - Unauthorized",
-        code: "UNAUTHORIZED"
+        error: 'Payment was declined or failed',
+        code: code
       };
     }
     
-    if (error.response?.status === 404) {
+    if (code === 'TIMED_OUT') {
       return {
         success: false,
-        error: "Payment not found",
-        code: "NOT_FOUND"
+        error: 'Payment request timed out',
+        code: code
       };
     }
 
     return {
       success: false,
-      error: "Payment verification failed",
-      code: "UNKNOWN_ERROR"
+      error: data?.responseCodeDescription || 'Payment verification failed',
+      code: code
     };
+  } catch (error) {
+    console.error('PhonePe status check error:', error);
+    return handleApiError(error);
   }
 }; 

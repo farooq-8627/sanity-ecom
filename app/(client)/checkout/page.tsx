@@ -128,20 +128,27 @@ export default function CheckoutPage() {
           address: selectedAddress?.addressLine1 ?? "",
           addressLine2: selectedAddress?.addressLine2 ?? "",
           city: selectedAddress?.city ?? "",
-          state: selectedAddress?.state ?? "",
+          state: selectedAddress?.state?.title ?? "",
           zip: selectedAddress?.pincode ?? "",
           phoneNumber: selectedAddress?.phoneNumber ?? "",
         },
         items: groupedItems.map(item => ({
-          product: item.product,
+          _type: 'orderItem',
+          _key: `item_${item.product._id}_${item.size || 'default'}_${Date.now()}`,
+          product: {
+            _type: 'reference',
+            _ref: item.product._id,
+          },
           quantity: item.quantity,
           size: item.size,
+          price: item.product.price
         })),
         totalAmount: subtotal - (appliedCoupon?.discount || 0),
         discountAmount: appliedCoupon?.discount || 0,
         couponCode: appliedCoupon?.code || null,
         paymentStatus: "cod",
-        orderStatus: "pending"
+        orderStatus: "confirmed",
+        paymentMethod: "cod"
       };
 
       const response = await fetch('/api/orders/cod', {
@@ -186,41 +193,93 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Handle prepaid payment through Stripe
-      const checkoutItems = groupedItems.map((item: CartItem): GroupedCartItems => ({
-        product: item.product,
-        quantity: item.quantity,
-        size: item.size,
-      }));
-
-      const metadata = {
+      // Create pending order first
+      const orderPayload = {
         orderNumber: `ORD-${Date.now()}-${uuidv4().substring(0, 6)}`,
-        customerName: user.fullName ?? selectedAddress.fullName ?? "Unknown",
-        customerEmail: user.primaryEmailAddress?.emailAddress ?? "Unknown",
-        clerkUserId: user.id,
-        address: {
-          name: selectedAddress.fullName ?? "",
-          address: selectedAddress.addressLine1 ?? "",
-          addressLine2: selectedAddress.addressLine2 ?? "",
-          city: selectedAddress.city ?? "",
-          state: selectedAddress.state ?? "",
-          zip: selectedAddress.pincode ?? "",
-          phoneNumber: selectedAddress.phoneNumber ?? "",
-        } as AddressInfo,
+        customer: {
+          name: user?.fullName ?? selectedAddress?.fullName ?? "Unknown",
+          email: user?.primaryEmailAddress?.emailAddress ?? "Unknown",
+          clerkUserId: user?.id
+        },
+        shippingAddress: {
+          name: selectedAddress?.fullName ?? "",
+          address: selectedAddress?.addressLine1 ?? "",
+          addressLine2: selectedAddress?.addressLine2 ?? "",
+          city: selectedAddress?.city ?? "",
+          state: selectedAddress?.state?.title ?? "",
+          zip: selectedAddress?.pincode ?? "",
+          phoneNumber: selectedAddress?.phoneNumber ?? "",
+        },
+        items: groupedItems.map(item => ({
+          _type: 'orderItem',
+          _key: `item_${item.product._id}_${item.size || 'default'}_${Date.now()}`,
+          product: {
+            _type: 'reference',
+            _ref: item.product._id,
+          },
+          quantity: item.quantity,
+          size: item.size,
+          price: item.product.price
+        })),
+        totalAmount: subtotal - (appliedCoupon?.discount || 0),
         discountAmount: appliedCoupon?.discount || 0,
-        couponCode: appliedCoupon?.code || null
-      } as Metadata;
+        couponCode: appliedCoupon?.code || null,
+        paymentStatus: "pending",
+        orderStatus: "pending",
+        paymentMethod: "phonepe",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
 
-      const checkoutUrl = await createCheckoutSession(checkoutItems, metadata);
-      
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
-      } else {
-        throw new Error("Failed to create checkout session");
+      const orderResponse = await fetch('/api/orders/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const orderResult = await orderResponse.json();
+
+      if (!orderResponse.ok) {
+        throw new Error(orderResult.error || 'Failed to create order');
       }
-    } catch (error) {
+
+      if (!orderResult.success || !orderResult.orderId) {
+        throw new Error('Invalid order response');
+      }
+
+      // Store orderId in localStorage before initiating payment
+      localStorage.setItem('pending_order_id', orderResult.orderId);
+
+      // Initiate PhonePe payment
+      const paymentResponse = await fetch('/api/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: finalAmount,
+          orderId: orderResult.orderId
+        }),
+      });
+
+      const paymentResult = await paymentResponse.json();
+
+      if (!paymentResponse.ok) {
+        // Remove stored order ID if payment initiation fails
+        localStorage.removeItem('pending_order_id');
+        throw new Error(paymentResult.error || 'Payment initiation failed');
+      }
+
+      if (paymentResult.redirectUrl) {
+        window.location.href = paymentResult.redirectUrl;
+      } else {
+        throw new Error('No redirect URL received');
+      }
+    } catch (error: any) {
       console.error("Checkout error:", error);
-      setError("An error occurred while processing your order. Please try again.");
+      setError(error.message || "An error occurred while processing your order. Please try again.");
       setIsProcessing(false);
     }
   };
@@ -315,7 +374,7 @@ export default function CheckoutPage() {
               <div className="space-y-4 mb-6">
                 {groupedItems.map((item: CartItem, index: number) => (
                   <div key={index} className="flex gap-4">
-                    <div className="relative h-20 w-16 rounded-md overflow-hidden bg-gray-100">
+                    <div className="relative h-12 w-12 rounded-md overflow-hidden bg-gray-100">
                       {item.product.images?.[0] && (
                         <Image
                           src={urlFor(item.product.images[0]).url()}

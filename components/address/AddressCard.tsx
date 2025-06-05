@@ -47,9 +47,9 @@ const AddressCard: React.FC<AddressCardProps> = ({
       setIsDeleting(true);
 
       try {
-        if (onDelete) {
+      if (onDelete) {
           await onDelete(address._key);
-        } else {
+      } else {
           const response = await fetch(`/api/addresses?key=${address._key}`, {
             method: "DELETE",
           });
@@ -60,11 +60,11 @@ const AddressCard: React.FC<AddressCardProps> = ({
 
           router.refresh();
         }
-      } catch (error) {
-        console.error("Error deleting address:", error);
-        alert("An error occurred while deleting the address. Please try again.");
-      } finally {
-        setIsDeleting(false);
+        } catch (error) {
+          console.error("Error deleting address:", error);
+          alert("An error occurred while deleting the address. Please try again.");
+        } finally {
+          setIsDeleting(false);
       }
     }
   };
