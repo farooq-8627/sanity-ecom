@@ -39,10 +39,10 @@ export async function POST(req: NextRequest) {
         _key: nanoid(),
         product: {
           _type: 'reference',
-          _ref: item.product._id,
+          _ref: item.product._id
         },
         quantity: item.quantity,
-        size: item.size || null,
+        size: item.size,
         price: item.product.price,
       })),
       totalAmount: orderData.totalAmount,

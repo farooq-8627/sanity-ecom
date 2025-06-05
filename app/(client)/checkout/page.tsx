@@ -136,12 +136,11 @@ export default function CheckoutPage() {
           _type: 'orderItem',
           _key: `item_${item.product._id}_${item.size || 'default'}_${Date.now()}`,
           product: {
-            _type: 'reference',
-            _ref: item.product._id,
+            _id: item.product._id,
+            price: item.product.price
           },
           quantity: item.quantity,
-          size: item.size,
-          price: item.product.price
+          size: item.size
         })),
         totalAmount: subtotal - (appliedCoupon?.discount || 0),
         discountAmount: appliedCoupon?.discount || 0,

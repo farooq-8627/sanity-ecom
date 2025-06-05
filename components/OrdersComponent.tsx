@@ -11,18 +11,31 @@ import {
 import PriceFormatter from "./PriceFormatter";
 import { format } from "date-fns";
 import { Package } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import OrderDetailDialog from "./OrderDetailDialog";
 import OrderTrackingDialog from "./OrderTrackingDialog";
 import { Button } from "./ui/button";
 
 const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
-  const [selectedOrder, setSelectedOrder] = useState<
-    MY_ORDERS_QUERYResult[number] | null
-  >(null);
-  const [trackingOrder, setTrackingOrder] = useState<
-    MY_ORDERS_QUERYResult[number] | null
-  >(null);
+  const [selectedOrder, setSelectedOrder] = useState<MY_ORDERS_QUERYResult[number] | null>(null);
+  const [trackingOrder, setTrackingOrder] = useState<MY_ORDERS_QUERYResult[number] | null>(null);
+
+  const handleCloseTracking = useCallback(() => {
+    setTrackingOrder(null);
+  }, []);
+
+  const handleCloseDetails = useCallback(() => {
+    setSelectedOrder(null);
+  }, []);
+
+  const handleTrackClick = useCallback((order: MY_ORDERS_QUERYResult[number], e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTrackingOrder(order);
+  }, []);
+
+  const handleRowClick = useCallback((order: MY_ORDERS_QUERYResult[number]) => {
+    setSelectedOrder(order);
+  }, []);
 
   const getOrderStatusFromTracking = (tracking: any) => {
     if (!tracking?.updates || tracking.updates.length === 0) {
@@ -38,14 +51,7 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
       return trackingStatus;
     }
 
-    // If no tracking, handle initial order status
-    if (order.orderStatus === "pending") {
-      if (order.paymentStatus === "paid" || order.paymentStatus === "cod") {
-        return "Confirmed";
-      }
-      return "Pending";
-    }
-
+    // Use backend order status directly
     return order.orderStatus.charAt(0).toUpperCase() + order.orderStatus.slice(1);
   };
 
@@ -70,23 +76,23 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
       }
     }
 
-    // If no tracking status, handle basic order status
-    if (order.orderStatus === "pending") {
-      if (order.paymentStatus === "paid" || order.paymentStatus === "cod") {
-        return "bg-green-100 text-green-800";
-      }
-      return "bg-gray-100 text-gray-800";
-    }
-
-    switch (order.orderStatus) {
-      case "delivered":
-        return "bg-green-100 text-green-800";
-      case "shipped":
-        return "bg-blue-100 text-blue-800";
+    // Use backend order status directly
+    switch (order.orderStatus as 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'out for delivery' | 'delivered' | 'cancelled') {
+      case "confirmed":
+        return "bg-yellow-100 text-yellow-800";
       case "processing":
         return "bg-yellow-100 text-yellow-800";
+      case "packed":
+        return "bg-indigo-100 text-indigo-800";
+      case "shipped":
+        return "bg-blue-100 text-blue-800";
+      case "out for delivery":
+        return "bg-blue-100 text-blue-800";
+      case "delivered":
+        return "bg-green-100 text-green-800";
       case "cancelled":
         return "bg-red-100 text-red-800";
+      case "pending":
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -109,7 +115,7 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
           <TableRow
             key={order?.orderNumber}
             className="hover:bg-gray-50 cursor-pointer"
-            onClick={() => setSelectedOrder(order)}
+            onClick={() => handleRowClick(order)}
           >
             <TableCell className="font-medium">
               {order.orderNumber?.slice(-10) ?? "N/A"}...
@@ -155,10 +161,7 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
                 variant="ghost"
                 size="sm"
                 className="flex items-center gap-2 hover:text-shop_dark_green"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent row click from triggering
-                  setTrackingOrder(order);
-                }}
+                onClick={(e) => handleTrackClick(order, e)}
               >
                 <Package className="h-4 w-4" />
                 Track
@@ -170,12 +173,12 @@ const OrdersComponent = ({ orders }: { orders: MY_ORDERS_QUERYResult }) => {
       <OrderDetailDialog
         order={selectedOrder}
         isOpen={!!selectedOrder}
-        onClose={() => setSelectedOrder(null)}
+        onClose={handleCloseDetails}
       />
       <OrderTrackingDialog
         order={trackingOrder}
         isOpen={!!trackingOrder}
-        onClose={() => setTrackingOrder(null)}
+        onClose={handleCloseTracking}
       />
     </>
   );

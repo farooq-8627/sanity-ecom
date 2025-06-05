@@ -256,8 +256,8 @@ export type Order = {
   };
   totalAmount: number;
   paymentStatus: 'pending' | 'paid' | 'cod' | 'failed' | 'refunded';
-  paymentMethod: 'stripe' | 'cod';
-  orderStatus: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  paymentMethod: 'phonepe' | 'cod';
+  orderStatus: 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'out for delivery' | 'delivered' | 'cancelled';
   stripeCheckoutId?: string;
   stripePaymentIntentId?: string;
   stripeCustomerId?: string;

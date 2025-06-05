@@ -85,13 +85,15 @@ const OrderDetailDialog: React.FC<OrderDetailsDialogProps> = ({
       return "text-gray-600";
     }
 
-    switch (order.orderStatus) {
+    switch (order.orderStatus as 'pending' | 'confirmed' | 'shipped' | 'out for delivery' | 'delivered' | 'cancelled') {
       case "delivered":
         return "text-green-600";
       case "shipped":
         return "text-blue-600";
-      case "processing":
-        return "text-yellow-600";
+      case "out for delivery":
+        return "text-blue-600";
+      case "confirmed":
+        return "text-green-600";
       case "cancelled":
         return "text-red-600";
       default:

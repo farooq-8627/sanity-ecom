@@ -143,7 +143,7 @@ export interface Order {
   discountAmount: number;
   couponCode: string | null;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'cod';
-  orderStatus: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  orderStatus: 'pending' | 'confirmed' | 'processing' | 'packed' | 'shipped' | 'out for delivery' | 'delivered' | 'cancelled';
   paymentMethod: 'phonepe' | 'cod';
   paymentDetails?: PhonePePaymentDetails;
   createdAt: string;
@@ -288,7 +288,10 @@ export const schemaTypes: SchemaTypeDefinition[] = [
           list: [
             { title: 'Pending', value: 'pending' },
             { title: 'Confirmed', value: 'confirmed' },
+            { title: 'Processing', value: 'processing' },
+            { title: 'Packed', value: 'packed' },
             { title: 'Shipped', value: 'shipped' },
+            { title: 'Out for Delivery', value: 'out for delivery' },
             { title: 'Delivered', value: 'delivered' },
             { title: 'Cancelled', value: 'cancelled' }
           ]
@@ -334,3 +337,4 @@ export const schemaTypes: SchemaTypeDefinition[] = [
     ]
   }
 ];
+ 
