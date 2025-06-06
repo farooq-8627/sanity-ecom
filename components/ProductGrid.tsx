@@ -15,9 +15,10 @@ interface ProductGridProps {
   products: Product[];
 }
 
-const ProductGrid = ({ products }: ProductGridProps) => {
+const ProductGrid = ({ products: initialProducts }: ProductGridProps) => {
   const [loading, setLoading] = useState(false);
   const [selectedTab, setSelectedTab] = useState("");
+  const [products, setProducts] = useState(initialProducts);
   
   // Updated query to match products by variant reference title
   const query = `*[_type == "product" && variant->title == $variant] | order(name asc){
@@ -32,7 +33,7 @@ const ProductGrid = ({ products }: ProductGridProps) => {
       setLoading(true);
       try {
         const response = await client.fetch(query, { variant: selectedTab });
-        setProducts(await response);
+        setProducts(response);
       } catch (error) {
         console.log("Product fetching Error", error);
       } finally {
