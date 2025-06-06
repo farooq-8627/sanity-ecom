@@ -37,6 +37,8 @@ interface StoreState {
   setGlobalMuted: (muted: boolean) => void;
   // Auth check
   isUserAuthenticated: () => Promise<boolean>;
+  isHydrated: boolean;
+  setHydrated: (state: boolean) => void;
 }
 
 const useStore = create<StoreState>()(
@@ -46,6 +48,8 @@ const useStore = create<StoreState>()(
       favoriteProduct: [],
       likedReels: [],
       globalMuted: true,
+      isHydrated: false,
+      setHydrated: (state: boolean) => set({ isHydrated: state }),
       setGlobalMuted: (muted: boolean) => set({ globalMuted: muted }),
       isUserAuthenticated: async () => {
         try {
@@ -519,6 +523,12 @@ const useStore = create<StoreState>()(
     }),
     {
       name: "cart-store",
+      onRehydrateStorage: () => (state) => {
+        // Called when the store is rehydrated from localStorage
+        if (state) {
+          state.setHydrated(true);
+        }
+      },
     }
   )
 );

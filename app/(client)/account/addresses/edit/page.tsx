@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Container from "@/components/Container";
 import Title from "@/components/Title";
 import AddressForm from "@/components/address/AddressForm";
-import { UserAddress } from "@/sanity.types";
+import { UserAddress } from "@/types";
 import { Loader2 } from "lucide-react";
 
 export default function EditAddressPage() {
@@ -33,7 +33,7 @@ export default function EditAddressPage() {
         }
         
         const data = await response.json();
-        const foundAddress = data.addresses.find((addr: UserAddress) => addr._id === addressId);
+        const foundAddress = data.addresses.find((addr: UserAddress) => addr._key === addressId);
         
         if (!foundAddress) {
           setError("Address not found. It may have been deleted.");
