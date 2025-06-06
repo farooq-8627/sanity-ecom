@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Container from "@/components/Container";
 import Title from "@/components/Title";
@@ -8,7 +8,29 @@ import AddressForm from "@/components/address/AddressForm";
 import { UserAddress } from "@/types";
 import { Loader2 } from "lucide-react";
 
-export default function EditAddressPage() {
+const EditAddressPage = () => {
+  return (
+    <Container>
+      <div className="max-w-2xl mx-auto py-8">
+        <Title className="mb-6">Edit Address</Title>
+        <div className="bg-white shadow-sm rounded-lg p-6">
+          <Suspense 
+            fallback={
+              <div className="flex items-center justify-center">
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                <span>Loading address details...</span>
+              </div>
+            }
+          >
+            <EditAddressForm />
+          </Suspense>
+        </div>
+      </div>
+    </Container>
+  );
+};
+
+const EditAddressForm = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const addressId = searchParams.get("id");
@@ -54,41 +76,28 @@ export default function EditAddressPage() {
 
   if (isLoading) {
     return (
-      <Container>
-        <div className="max-w-2xl mx-auto py-16 flex justify-center">
-          <div className="flex items-center">
-            <Loader2 className="w-5 h-5 animate-spin mr-2" />
-            <span>Loading address details...</span>
-          </div>
-        </div>
-      </Container>
+      <div className="flex items-center justify-center">
+        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+        <span>Loading address details...</span>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Container>
-        <div className="max-w-2xl mx-auto py-16 text-center">
-          <p className="text-red-500 mb-4">{error}</p>
-          <button 
-            onClick={() => router.push("/account/addresses")}
-            className="text-shop_dark_green hover:underline"
-          >
-            Back to Addresses
-          </button>
-        </div>
-      </Container>
+      <div className="text-center">
+        <p className="text-red-500 mb-4">{error}</p>
+        <button 
+          onClick={() => router.push("/account/addresses")}
+          className="text-shop_dark_green hover:underline"
+        >
+          Back to Addresses
+        </button>
+      </div>
     );
   }
 
-  return (
-    <Container>
-      <div className="max-w-2xl mx-auto py-8">
-        <Title className="mb-6">Edit Address</Title>
-        <div className="bg-white shadow-sm rounded-lg p-6">
-          {address && <AddressForm address={address} isCheckout={isCheckout} />}
-        </div>
-      </div>
-    </Container>
-  );
-} 
+  return address && <AddressForm address={address} isCheckout={isCheckout} />;
+};
+
+export default EditAddressPage; 
