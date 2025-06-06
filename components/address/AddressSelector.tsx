@@ -42,12 +42,6 @@ export function AddressSelector({
         const data = await response.json();
         setAddresses(data.addresses || []);
         
-      // Only set default address if no address is currently selected
-      if (data.addresses?.length > 0 && !selectedAddress) {
-          const defaultAddress = data.addresses.find((addr: UserAddress) => addr.isDefault) || data.addresses[0];
-          onSelectAddress(defaultAddress);
-        setSelectedAddressKey(defaultAddress._key);
-        }
       } catch (error) {
         console.error("Error fetching addresses:", error);
       setError("Failed to load addresses");
@@ -126,8 +120,7 @@ export function AddressSelector({
         </div>
         <Button 
           onClick={() => router.push(`/account/addresses/add?${isCheckout ? "checkout=true" : ""}`)}
-          className="flex items-center gap-2 bg-white w-full md:w-auto"
-          variant="outline"
+          className="flex items-center gap-2 w-full md:w-auto bg-shop_dark_green/80 text-white hover:bg-shop_dark_green"
           size="default"
         >
           <Plus className="h-5 w-5" />
