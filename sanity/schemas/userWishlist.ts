@@ -27,10 +27,16 @@ export default defineType({
               validation: (Rule) => Rule.required()
             }),
             defineField({
+              name: 'productName',
+              title: 'Product Name',
+              type: 'string',
+              validation: (Rule) => Rule.required()
+            }),
+            defineField({
               name: 'addedAt',
               title: 'Added At',
               type: 'datetime',
-              initialValue: () => new Date().toISOString()
+              validation: (Rule) => Rule.required()
             })
           ],
           preview: {
@@ -50,19 +56,20 @@ export default defineType({
     }),
     defineField({
       name: 'updatedAt',
-      title: 'Updated At',
-      type: 'datetime',
-      initialValue: () => new Date().toISOString()
+      title: 'Last Updated',
+      type: 'datetime'
     })
   ],
   preview: {
     select: {
-      title: 'userId'
+      title: 'userId',
+      items: 'items'
     },
     prepare(selection) {
-      const { title } = selection;
+      const { title, items } = selection;
       return {
-        title: `Wishlist: ${title || 'Unknown User'}`
+        title: `Wishlist: ${title || 'Unknown User'}`,
+        subtitle: `${items?.length || 0} items`
       };
     }
   }

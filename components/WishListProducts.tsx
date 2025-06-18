@@ -68,7 +68,7 @@ const WishListProducts = () => {
                           >
                             <SanityImage
                               image={product.images[0]}
-                              alt={"product image"}
+                              alt={product.name || "Product image"}
                               width={80}
                               height={80}
                               className="rounded-md group-hover:scale-105 hoverEffect h-20 w-20 object-contain"

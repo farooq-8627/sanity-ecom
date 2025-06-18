@@ -26,42 +26,33 @@ export async function GET(req: Request) {
         items[] {
           _key,
           productId,
+          productName,
           addedAt
         }
       }`,
       { userId }
     );
     
-    // If no wishlist exists, return empty array
     if (!userWishlist) {
-      console.log("No wishlist found for user:", userId);
-      return NextResponse.json({ favoriteProduct: [] });
+      console.log(`No wishlist found for user ${userId}`);
+      return NextResponse.json({ items: [] });
     }
     
-    console.log("Found wishlist with", userWishlist.items?.length || 0, "items for user", userId);
+    // Get full product details for each item in the wishlist
+    const productsQuery = `*[_type == "product" && _id in $productIds]`;
+    const products = await client.fetch(productsQuery, {
+      productIds: userWishlist.items?.map((item: any) => item.productId) || []
+    });
     
-    // Get product details for each item in wishlist
-    const wishlistProducts = await Promise.all(
-      (userWishlist.items || []).map(async (item: any) => {
-        const product = await client.fetch(
-          `*[_type == "product" && _id == $productId][0]`,
-          { productId: item.productId }
-        );
-        
-        if (!product) {
-          console.log(`Product not found for ID: ${item.productId}`);
-        }
-        
-        return product;
-      })
-    );
+    // Map products back to wishlist items
+    const wishlistWithProducts = products.map((product: any) => ({
+      ...product,
+      addedAt: userWishlist.items.find((item: any) => item.productId === product._id)?.addedAt
+    }));
     
-    // Filter out any null products (in case a product was deleted)
-    const validProducts = wishlistProducts.filter(product => product !== null);
+    console.log(`Found ${wishlistWithProducts.length} products in wishlist for user ${userId}`);
     
-    console.log("Returning", validProducts.length, "valid products for wishlist of user", userId);
-    
-    return NextResponse.json({ favoriteProduct: validProducts });
+    return NextResponse.json({ items: wishlistWithProducts });
   } catch (error) {
     console.error("Error fetching user wishlist:", error);
     return NextResponse.json(
@@ -71,7 +62,7 @@ export async function GET(req: Request) {
   }
 }
 
-// Update user wishlist
+// Update wishlist
 export async function POST(req: Request) {
   try {
     // Authenticate user
@@ -84,7 +75,6 @@ export async function POST(req: Request) {
       );
     }
     
-    // Get items from request
     const body = await req.json();
     console.log(`Received wishlist update request for user ${userId}:`, body);
     
@@ -121,58 +111,34 @@ export async function POST(req: Request) {
         }
         
         return {
-          _key: `${product._id}_${Date.now()}_${index}`,
+          _key: `${product._id}_${index}`,
           productId: product._id,
+          productName: product.name,
           addedAt: new Date().toISOString()
         };
       });
       
       console.log(`Formatted ${sanityWishlistItems.length} wishlist items for user ${userId}`);
       
-      // Check if user already has a wishlist
-      const existingWishlist = await client.fetch(
-        `*[_type == "userWishlist" && userId == $userId][0]`,
-        { userId }
-      );
+      // Create a document ID that's deterministic based on the user ID
+      const wishlistDocId = `wishlist_${userId}`;
       
-      if (existingWishlist) {
-        console.log(`Updating existing wishlist for user ${userId}:`, existingWishlist._id);
-        
-        // Update existing wishlist
-        const result = await backendClient
-          .patch(existingWishlist._id)
-          .set({ 
-            items: sanityWishlistItems,
-            updatedAt: new Date().toISOString()
-          })
-          .commit();
-          
-        console.log(`Wishlist updated successfully for user ${userId}:`, result._id);
-        
-        return NextResponse.json({ 
-          success: true,
-          itemCount: sanityWishlistItems.length,
-          userId: userId
-        });
-      } else {
-        console.log(`Creating new wishlist for user ${userId}`);
-        
-        // Create new wishlist
-        const result = await backendClient.create({
-          _type: 'userWishlist',
-          userId,
-          items: sanityWishlistItems,
-          updatedAt: new Date().toISOString()
-        });
-        
-        console.log(`New wishlist created for user ${userId}:`, result._id);
-        
-        return NextResponse.json({ 
-          success: true,
-          itemCount: sanityWishlistItems.length,
-          userId: userId
-        });
-      }
+      // Use createOrReplace to ensure we only ever have one wishlist per user
+      const result = await backendClient.createOrReplace({
+        _type: 'userWishlist',
+        _id: wishlistDocId,
+        userId: userId,
+        items: sanityWishlistItems,
+        updatedAt: new Date().toISOString()
+      });
+      
+      console.log(`Wishlist operation successful for user ${userId}:`, result._id);
+      
+      return NextResponse.json({ 
+        success: true,
+        itemCount: sanityWishlistItems.length,
+        userId: userId
+      });
     } catch (error) {
       console.error(`Sanity write error for user ${userId}:`, error);
       return NextResponse.json(
@@ -228,7 +194,10 @@ export async function PUT(req: Request) {
     }
     
     try {
-      // Check if user already has a wishlist
+      // Create a document ID that's deterministic based on the user ID
+      const wishlistDocId = `wishlist_${userId}`;
+      
+      // Get current wishlist
       const existingWishlist = await client.fetch(
         `*[_type == "userWishlist" && userId == $userId][0]{
           _id,
@@ -240,88 +209,72 @@ export async function PUT(req: Request) {
         { userId }
       );
       
+      let updatedItems;
+      
       if (existingWishlist) {
         // Check if product is already in wishlist
-        const isInWishlist = existingWishlist.items.some(
+        const isInWishlist = existingWishlist.items?.some(
           (item: any) => item.productId === product._id
         );
         
         if (isInWishlist) {
           // Remove product from wishlist
-          const updatedItems = existingWishlist.items.filter(
+          updatedItems = (existingWishlist.items || []).filter(
             (item: any) => item.productId !== product._id
           );
-          
-          await backendClient
-            .patch(existingWishlist._id)
-            .set({ 
-              items: updatedItems,
-              updatedAt: new Date().toISOString()
-            })
-            .commit();
-            
-          return NextResponse.json({ 
-            added: false,
-            message: "Product removed from wishlist"
-          });
         } else {
-          // Add product to wishlist with _key property
-          const updatedItems = [
-            ...existingWishlist.items,
+          // Add product to wishlist
+          updatedItems = [
+            ...(existingWishlist.items || []),
             {
-              _key: `${product._id}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+              _key: `${product._id}_${Date.now()}`,
               productId: product._id,
+              productName: product.name,
               addedAt: new Date().toISOString()
             }
           ];
-          
-          await backendClient
-            .patch(existingWishlist._id)
-            .set({ 
-              items: updatedItems,
-              updatedAt: new Date().toISOString()
-            })
-            .commit();
-            
-          return NextResponse.json({ 
-            added: true,
-            message: "Product added to wishlist"
-          });
         }
       } else {
-        // Create new wishlist with this product with _key property
-        await backendClient.create({
-          _type: 'userWishlist',
-          userId,
-          items: [
-            {
-              _key: `${product._id}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-              productId: product._id,
-              addedAt: new Date().toISOString()
-            }
-          ],
-          updatedAt: new Date().toISOString()
-        });
-        
-        return NextResponse.json({ 
-          added: true,
-          message: "Product added to wishlist"
-        });
+        // Create new wishlist with single item
+        updatedItems = [{
+          _key: `${product._id}_${Date.now()}`,
+          productId: product._id,
+          productName: product.name,
+          addedAt: new Date().toISOString()
+        }];
       }
+      
+      // Use createOrReplace to update the wishlist
+      const result = await backendClient.createOrReplace({
+        _type: 'userWishlist',
+        _id: wishlistDocId,
+        userId: userId,
+        items: updatedItems,
+        updatedAt: new Date().toISOString()
+      });
+      
+      console.log(`Wishlist toggle successful for user ${userId}:`, result._id);
+      
+      return NextResponse.json({ 
+        success: true,
+        itemCount: updatedItems.length,
+        userId: userId,
+        isInWishlist: !existingWishlist?.items?.some((item: any) => item.productId === product._id)
+      });
     } catch (error) {
-      console.error("Sanity write error:", error);
+      console.error(`Sanity write error for user ${userId}:`, error);
       return NextResponse.json(
         { 
-          error: "Failed to update wishlist. Your token may be read-only.",
-          details: "Sanity write operation failed. Please ensure your token has write permissions."
+          error: "Failed to toggle wishlist item. Your token may be read-only.",
+          details: error instanceof Error ? error.message : String(error)
         },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error("Error updating user wishlist:", error);
+    console.error("Error toggling wishlist item:", error);
     return NextResponse.json(
-      { error: "Failed to update wishlist" },
+      { error: "Failed to toggle wishlist item" },
       { status: 500 }
     );
   }

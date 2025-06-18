@@ -13,6 +13,8 @@ import { productReelType } from "./productReelType";
 import productVariantType from "./productVariantType";
 import userAddresses from "../schemas/userAddress";
 import { couponType } from "./couponType";
+import userCart from "../schemas/userCart";
+import userWishlist from "../schemas/userWishlist";
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -29,6 +31,8 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     productReelType,
     productVariantType,
     userAddresses as SchemaTypeDefinition,
+    userCart as SchemaTypeDefinition,
+    userWishlist as SchemaTypeDefinition,
     couponType,
   ],
 };

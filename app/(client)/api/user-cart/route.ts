@@ -140,50 +140,25 @@ export async function POST(req: Request) {
       
       console.log(`Formatted ${sanityCartItems.length} cart items for user ${userId}`);
       
-      // Check if user already has a cart - just get the ID
-      const existingCartId = await client.fetch(
-        `*[_type == "userCart" && clerkUserId == $userId][0]._id`,
-        { userId }
-      );
+      // Create a document ID that's deterministic based on the user ID
+      const cartDocId = `cart_${userId}`;
       
-      if (existingCartId) {
-        console.log(`Updating existing cart for user ${userId}:`, existingCartId);
-        
-        // Update existing cart
-        const result = await backendClient
-          .patch(existingCartId)
-          .set({ 
-            items: sanityCartItems,
-            updatedAt: new Date().toISOString()
-          })
-          .commit();
-          
-        console.log(`Cart updated successfully for user ${userId}:`, result._id);
-        
-        return NextResponse.json({ 
-          success: true,
-          itemCount: sanityCartItems.length,
-          userId: userId
-        });
-      } else {
-        console.log(`Creating new cart for user ${userId}`);
-        
-        // Create new cart
-        const result = await backendClient.create({
-          _type: 'userCart',
-          clerkUserId: userId,
-          items: sanityCartItems,
-          updatedAt: new Date().toISOString()
-        });
-        
-        console.log(`New cart created for user ${userId}:`, result._id);
-        
-        return NextResponse.json({ 
-          success: true,
-          itemCount: sanityCartItems.length,
-          userId: userId
-        });
-      }
+      // Use createOrReplace to ensure we only ever have one cart per user
+      const result = await backendClient.createOrReplace({
+        _type: 'userCart',
+        _id: cartDocId,
+        clerkUserId: userId,
+        items: sanityCartItems,
+        updatedAt: new Date().toISOString()
+      });
+      
+      console.log(`Cart operation successful for user ${userId}:`, result._id);
+      
+      return NextResponse.json({ 
+        success: true,
+        itemCount: sanityCartItems.length,
+        userId: userId
+      });
     } catch (error) {
       console.error(`Sanity write error for user ${userId}:`, error);
       return NextResponse.json(

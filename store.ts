@@ -214,7 +214,8 @@ const useStore = create<StoreState>()(
             return { success: false, reason: "not_authenticated" };
           }
           
-          console.log("Syncing cart with server...", get().items.length, "items");
+          const items = get().items;
+          console.log("Syncing cart with server...", items.length, "items");
           
           const response = await fetch('/api/user-cart', {
             method: 'POST',
@@ -222,7 +223,7 @@ const useStore = create<StoreState>()(
               'Content-Type': 'application/json',
               'Cache-Control': 'no-cache',
             },
-            body: JSON.stringify({ items: get().items }),
+            body: JSON.stringify({ items }),
           });
           
           if (response.status === 401) {
@@ -237,7 +238,7 @@ const useStore = create<StoreState>()(
           }
           
           const data = await response.json();
-          console.log("Cart sync response:", data);
+          console.log("Cart sync successful:", data);
           return data;
         } catch (error) {
           console.error("Error syncing cart with server:", error);
