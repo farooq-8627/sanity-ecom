@@ -11,10 +11,10 @@ import { authorType } from "./authorType";
 import { addressType } from "./addressType";
 import { productReelType } from "./productReelType";
 import productVariantType from "./productVariantType";
-import userAddresses from "../schemas/userAddress";
+import { userAddressType } from "./userAddressType";
 import { couponType } from "./couponType";
-import userCart from "../schemas/userCart";
-import userWishlist from "../schemas/userWishlist";
+import { userCartType } from "./userCartType";
+import { userWishlistType } from "./userWishlistType";
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -30,9 +30,9 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     addressType,
     productReelType,
     productVariantType,
-    userAddresses as SchemaTypeDefinition,
-    userCart as SchemaTypeDefinition,
-    userWishlist as SchemaTypeDefinition,
+    userAddressType,
+    userWishlistType,
+    userCartType,
     couponType,
   ],
 };

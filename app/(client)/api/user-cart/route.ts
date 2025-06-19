@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { client } from "@/sanity/lib/client";
 import { backendClient } from "@/sanity/lib/backendClient";
 import { CartItem } from "@/store";
+import { getUserCart } from "@/sanity/queries";
 
 // Get user cart
 export async function GET(req: Request) {
@@ -20,36 +20,7 @@ export async function GET(req: Request) {
     console.log("Fetching cart for user:", userId);
     
     // Check if user has a cart in Sanity
-    const userCart = await client.fetch(
-      `*[_type == "userCart" && clerkUserId == $userId][0]{
-        _id,
-        clerkUserId,
-        items[] {
-          _key,
-          product->{
-            _id,
-            _type,
-            name,
-            slug,
-            images,
-            description,
-            price,
-            discount,
-            categories,
-            stock,
-            brand,
-            status,
-            variant,
-            isFeatured,
-            hasSizes,
-            sizes
-          },
-          quantity,
-          size
-        }
-      }`,
-      { userId }
-    );
+    const userCart = await getUserCart(userId);
     
     // If no cart exists, return empty array
     if (!userCart) {

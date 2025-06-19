@@ -111,6 +111,64 @@ const OTHERS_BLOG_QUERY = defineQuery(`*[
   }
 }`);
 
+const GET_USER_WISHLIST = defineQuery(`*[_type == "userWishlist" && userId == $userId][0] {
+  ...,
+  items[] {
+    ...,
+    product-> {
+      _id,
+      name,
+      images,
+    }
+  }
+}`);
+
+const GET_USER_CART = defineQuery(
+  `*[_type == "userCart" && clerkUserId == $userId][0]{
+    _id,
+    clerkUserId,
+    items[] {
+      _key,
+      product->{
+        _id,
+        _type,
+        name,
+        slug,
+        images,
+        description,
+        price,
+        discount,
+        categories,
+        stock,
+        brand,
+        status,
+        variant,
+        isFeatured,
+        hasSizes,
+        sizes
+      },
+      quantity,
+      size
+    }
+  }`);
+
+const GET_USER_ADDRESSES = defineQuery(`*[_type == "userAddresses" && clerkUserId == $userId][0] {
+  _id,
+  _type,
+  clerkUserId,
+  addresses[] {
+    _key,
+    addressName,
+    fullName,
+    phoneNumber,
+    addressLine1,
+    addressLine2,
+    city,
+    state,
+    pincode,
+    isDefault
+  }
+}`);
 export {
   BRANDS_QUERY,
   LATEST_BLOG_QUERY,
@@ -123,4 +181,7 @@ export {
   BLOG_CATEGORIES,
   OTHERS_BLOG_QUERY,
   REEL_BY_PRODUCT_SLUG_QUERY,
+  GET_USER_WISHLIST,
+  GET_USER_CART,
+  GET_USER_ADDRESSES,
 };

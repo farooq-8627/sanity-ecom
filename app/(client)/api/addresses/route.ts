@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import { v4 as uuidv4 } from 'uuid';
-import { getUserAddresses } from '@/sanity/queries';
 import { backendClient } from '@/sanity/lib/backendClient';
+import { getUserAddresses } from '@/sanity/queries';
 
 export async function GET(req: NextRequest) {
   try {
@@ -13,11 +13,11 @@ export async function GET(req: NextRequest) {
     }
 
     // Query for user addresses
-      const userAddresses = await getUserAddresses(userId);
+    const userAddresses = await getUserAddresses(userId);
 
     return NextResponse.json({ 
       success: true, 
-      data: userAddresses?.addresses || [] 
+      addresses: userAddresses?.addresses || [] 
     });
   } catch (error) {
     console.error('Error fetching addresses:', error);

@@ -5,6 +5,9 @@ import {
   BRANDS_QUERY,
   DEAL_PRODUCTS,
   GET_ALL_BLOG,
+  GET_USER_ADDRESSES,
+  GET_USER_CART,
+  GET_USER_WISHLIST,
   LATEST_BLOG_QUERY,
   MY_ORDERS_QUERY,
   OTHERS_BLOG_QUERY,
@@ -166,6 +169,37 @@ export const getMyOrders = async (userId: string) => {
     return orders?.data || null;
   } catch (error) {
     console.error("Error fetching orders:", error);
+    return null;
+  }
+};
+
+export const getUserWishlist = async (userId: string) => {
+  try {
+    const { data } = await sanityFetch({ query: GET_USER_WISHLIST, params: { userId } });
+    return data || null;
+  } catch (error) {
+    console.error("Error fetching user wishlist:", error);
+    return null;
+  }
+};
+
+export const getUserCart = async (userId: string) => {
+  try {
+    const { data } = await sanityFetch({ query: GET_USER_CART, params: { userId } });
+    return data || null;
+  } catch (error) {
+    console.error("Error fetching user cart:", error);
+    return null;
+  }
+};
+
+export const getUserAddresses = async (userId: string) => {
+
+  try {
+    const { data } = await sanityFetch({ query: GET_USER_ADDRESSES, params: { userId } });
+    return data || null;
+  } catch (error) {
+    console.error("Error fetching user addresses:", error);
     return null;
   }
 };

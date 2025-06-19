@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { client } from "@/sanity/lib/client";
 import { backendClient } from "@/sanity/lib/backendClient";
+import { getUserWishlist } from "@/sanity/queries";
 
 // Get user wishlist
 export async function GET(req: Request) {
@@ -19,23 +20,11 @@ export async function GET(req: Request) {
     console.log("Fetching wishlist for user:", userId);
     
     // Check if user has a wishlist in Sanity
-    const userWishlist = await client.fetch(
-      `*[_type == "userWishlist" && userId == $userId][0]{
-        _id,
-        userId,
-        items[] {
-          _key,
-          productId,
-          productName,
-          addedAt
-        }
-      }`,
-      { userId }
-    );
+    const userWishlist = await getUserWishlist(userId);
     
     if (!userWishlist) {
       console.log(`No wishlist found for user ${userId}`);
-      return NextResponse.json({ items: [] });
+      return NextResponse.json({ favoriteProduct: [] });
     }
     
     // Get full product details for each item in the wishlist
@@ -52,7 +41,7 @@ export async function GET(req: Request) {
     
     console.log(`Found ${wishlistWithProducts.length} products in wishlist for user ${userId}`);
     
-    return NextResponse.json({ items: wishlistWithProducts });
+    return NextResponse.json({ favoriteProduct: wishlistWithProducts });
   } catch (error) {
     console.error("Error fetching user wishlist:", error);
     return NextResponse.json(
@@ -203,7 +192,8 @@ export async function PUT(req: Request) {
           _id,
           items[] {
             _key,
-            productId
+            productId,
+            productName
           }
         }`,
         { userId }

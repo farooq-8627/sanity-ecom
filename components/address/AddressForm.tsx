@@ -87,9 +87,9 @@ const AddressForm: React.FC<AddressFormProps> = ({
 
       // Update or create address
       const url = "/api/addresses";
-      const method = address?._key ? "PATCH" : "POST";
+      const method = address?._key ? "PUT" : "POST";
       const body = address?._key 
-        ? JSON.stringify({ ...formData, addressKey: address._key })
+        ? JSON.stringify({ ...formData, _key: address._key })
         : JSON.stringify(formData);
 
       const response = await fetch(url, {
@@ -101,10 +101,16 @@ const AddressForm: React.FC<AddressFormProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save address");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to save address");
       }
 
-      // Call success callback or navigate to checkout
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error(data.error || "Failed to save address");
+      }
+
+      // Call success callback or navigate back
       if (onSuccess) {
         onSuccess();
       } else {
@@ -112,7 +118,7 @@ const AddressForm: React.FC<AddressFormProps> = ({
       }
     } catch (error) {
       console.error("Error saving address:", error);
-      alert("An error occurred while saving your address. Please try again.");
+      alert(error instanceof Error ? error.message : "An error occurred while saving your address. Please try again.");
     } finally {
       setIsLoading(false);
     }

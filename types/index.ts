@@ -1,38 +1,37 @@
 import type {
-  ProductImage,
-  Product,
-  Category,
-  Banner,
-  UserAddress as SanityUserAddress,
-  UserAddresses,
-  OrderItem,
-  Order,
-  Coupon,
-  SanityDocument
-} from '@/sanity/schemas/schema';
+  ProductType,
+  CategoryType,
+  OrderItemType,
+  OrderType,
+  CouponType,
+  SanityDocument,
+  UserAddressType,
+  Product as SanityProduct,
+  BannerType,
+  SanityUserAddress
+} from '@/sanity/schemaTypes/types';
 
 // Re-export types with aliases to avoid conflicts
 export type {
-  ProductImage,
-  Product,
-  Category,
-  Banner,
-  UserAddresses,
-  OrderItem,
-  Order,
-  Coupon,
-  SanityDocument
+  ProductType,
+  CategoryType,
+  BannerType,
+  OrderItemType,
+  OrderType,
+  CouponType,
+  SanityDocument,
+  UserAddressType,
 };
 
 // Additional application types
 export interface CartItem {
-  product: Product;
+  product: SanityProduct;
   quantity: number;
   size?: string;
 }
 
 export interface WishlistItem {
-  product: Product;
+  product: SanityProduct;
   addedAt: string;
 }
 
@@ -75,7 +74,7 @@ export interface CartStore {
 
 export interface WishlistStore {
   items: WishlistItem[];
-  addItem: (product: Product) => void;
+  addItem: (product: SanityProduct) => void;
   removeItem: (productId: string) => void;
   hasItem: (productId: string) => boolean;
   clearWishlist: () => void;
@@ -129,3 +128,90 @@ export interface UserAddressDocument {
   addresses: UserAddress[];
   updatedAt: string;
 } 
+
+export interface AddressInfo {
+  name: string;
+  address: string;
+  addressLine2: string;
+  city: string;
+  state: {
+    code: string;
+    title: string;
+  };
+  zip: string;
+  phoneNumber: string;
+}
+
+export interface Product extends SanityProduct  {
+  _id: string;
+  _type: "product";
+  name: string;
+  slug: { current: string };
+  images: { url: string }[];
+  description: string;
+  price: number;
+  discount: number;
+  categories: string[];
+  stock: number;
+  brand: string;
+  status: string;
+  variant: string;
+  isFeatured: boolean;
+  hasSizes: boolean;
+  sizes: ProductSize[];
+  productReels: ProductReel[];
+}
+
+export type ProductReel = {
+  _id: string;
+  video: {
+    url: string;
+  };
+  product: {
+    _id: string;
+    name: string;
+    description: string;
+    images: {
+      asset?: {
+        _ref: string;
+        _type: "reference";
+        _weak?: boolean;
+      };
+      hotspot?: {
+        x?: number;
+        y?: number;
+        height?: number;
+        width?: number;
+      };
+      crop?: {
+        top?: number;
+        bottom?: number;
+        left?: number;
+        right?: number;
+      };
+      _type: "image";
+      _key: string;
+    }[];
+    stock: number;
+    price: number;
+    slug: {
+      current: string;
+    };
+    discount?: number;
+    hasSizes?: boolean;
+    sizes?: {
+      _key: string;
+      size: string;
+      isEnabled: boolean;
+    }[];
+  };
+  likes: number;
+  views: number;
+  tags: string[];
+} 
+
+export type ProductSize = {
+  _key: string;
+  size: string;
+  isEnabled: boolean;
+}

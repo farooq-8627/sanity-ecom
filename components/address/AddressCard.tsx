@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { UserAddress } from "@/types";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Edit, Trash2, MapPin, Loader2 } from "lucide-react";
@@ -19,7 +19,7 @@ interface AddressCardProps {
   isManageable?: boolean;
 }
 
-const AddressCard: React.FC<AddressCardProps> = ({
+const   AddressCard: React.FC<AddressCardProps> = ({
   address,
   onSelect,
   isSelected = false,

@@ -11,15 +11,12 @@ import { Loader2, CreditCard, Wallet, Tag, X } from "lucide-react";
 import AddressSelector from "@/components/address/AddressSelector";
 import { UserAddress } from "@/types";
 import useStore, { CartItem } from "@/store";
-import { formatCurrency } from "@/lib/utils";
 import PriceFormatter from "@/components/PriceFormatter";
-import { v4 as uuidv4 } from "uuid";
-import { GroupedCartItems, createCheckoutSession, type Metadata, type AddressInfo } from "@/actions/createCheckoutSession";
-import { Product } from "@/sanity/schemas/schema";
 import CheckoutSkeleton from "@/components/skeletons/CheckoutSkeleton";
 import { client } from "@/sanity/lib/client";
 import imageUrlBuilder from '@sanity/image-url'
 import toast from "react-hot-toast";
+import { generateOrderData } from "@/lib/utils/orderUtils";
 
 const builder = imageUrlBuilder(client);
 
@@ -117,38 +114,25 @@ export default function CheckoutPage() {
   };
 
   const createCodOrder = async () => {
+    if (!selectedAddress) {
+      setError("Please select a delivery address");
+      return;
+    }
+
+    if (!user) {
+      setError("User not authenticated");
+      return;
+    }
+
     try {
-      const orderData = {
-        orderNumber: `ORD-${Date.now()}-${uuidv4().substring(0, 6)}`,
-        customerName: user?.fullName ?? selectedAddress?.fullName ?? "Unknown",
-        customerEmail: user?.primaryEmailAddress?.emailAddress ?? "Unknown",
-        clerkUserId: user?.id,
-        address: {
-          name: selectedAddress?.fullName ?? "",
-          address: selectedAddress?.addressLine1 ?? "",
-          addressLine2: selectedAddress?.addressLine2 ?? "",
-          city: selectedAddress?.city ?? "",
-          state: selectedAddress?.state?.title ?? "",
-          zip: selectedAddress?.pincode ?? "",
-          phoneNumber: selectedAddress?.phoneNumber ?? "",
-        },
-        items: groupedItems.map(item => ({
-          _type: 'orderItem',
-          _key: `item_${item.product._id}_${item.size || 'default'}_${Date.now()}`,
-          product: {
-            _id: item.product._id,
-            price: item.product.price
-          },
-          quantity: item.quantity,
-          size: item.size
-        })),
-        totalAmount: subtotal - (appliedCoupon?.discount || 0),
-        discountAmount: appliedCoupon?.discount || 0,
-        couponCode: appliedCoupon?.code || null,
-        paymentStatus: "cod",
-        orderStatus: "confirmed",
-        paymentMethod: "cod"
-      };
+      const orderData = generateOrderData({
+        user,
+        selectedAddress,
+        groupedItems,
+        subtotal,
+        appliedCoupon,
+        paymentMethod: 'cod'
+      });
 
       const response = await fetch('/api/orders/cod', {
         method: 'POST',
@@ -193,42 +177,14 @@ export default function CheckoutPage() {
       }
 
       // Create pending order first
-      const orderPayload = {
-        orderNumber: `ORD-${Date.now()}-${uuidv4().substring(0, 6)}`,
-        customer: {
-          name: user?.fullName ?? selectedAddress?.fullName ?? "Unknown",
-          email: user?.primaryEmailAddress?.emailAddress ?? "Unknown",
-          clerkUserId: user?.id
-        },
-        shippingAddress: {
-          name: selectedAddress?.fullName ?? "",
-          address: selectedAddress?.addressLine1 ?? "",
-          addressLine2: selectedAddress?.addressLine2 ?? "",
-          city: selectedAddress?.city ?? "",
-          state: selectedAddress?.state?.title ?? "",
-          zip: selectedAddress?.pincode ?? "",
-          phoneNumber: selectedAddress?.phoneNumber ?? "",
-        },
-        items: groupedItems.map(item => ({
-          _type: 'orderItem',
-          _key: `item_${item.product._id}_${item.size || 'default'}_${Date.now()}`,
-          product: {
-            _type: 'reference',
-            _ref: item.product._id,
-          },
-          quantity: item.quantity,
-          size: item.size,
-          price: item.product.price
-        })),
-        totalAmount: subtotal - (appliedCoupon?.discount || 0),
-        discountAmount: appliedCoupon?.discount || 0,
-        couponCode: appliedCoupon?.code || null,
-        paymentStatus: "pending",
-        orderStatus: "pending",
-        paymentMethod: "phonepe",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      const orderPayload = generateOrderData({
+        user,
+        selectedAddress,
+        groupedItems,
+        subtotal,
+        appliedCoupon,
+        paymentMethod: 'phonepe'
+      });
 
       const orderResponse = await fetch('/api/orders/create', {
         method: 'POST',

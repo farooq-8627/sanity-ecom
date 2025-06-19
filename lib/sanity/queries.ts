@@ -12,3 +12,19 @@ export async function getProductVariants() {
   
   return client.fetch(query);
 } 
+
+export async function getLatestBlogs(quantity: number): Promise<any[]> {
+  const query = `*[_type == "blog"] | order(publishedAt desc)[0...${quantity}]{
+    _id,
+    title,
+    slug,
+    mainImage,
+    publishedAt,
+    blogcategories[]->{
+      _id,
+      title 
+    }
+  }`;
+
+  return client.fetch(query);
+}

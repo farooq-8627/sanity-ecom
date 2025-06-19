@@ -7,7 +7,9 @@ const MERCHANT_ID = process.env.NEXT_PUBLIC_MERCHANT_ID || 'PGTESTPAYUAT';
 const SALT_KEY = process.env.NEXT_PUBLIC_SALT_KEY || '099eb0cd-02cf-4e2a-8aca-3e6c6aff0399';
 const SALT_INDEX = '1';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-const API_URL = process.env.NEXT_PUBLIC_PHONE_PAY_HOST_URL || 'https://api-preprod.phonepe.com/apis/pg-sandbox';
+const API_URL = IS_PRODUCTION 
+  ? 'https://api.phonepe.com/apis/hermes'
+  : 'https://api-preprod.phonepe.com/apis/pg-sandbox';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000; // 2 seconds
@@ -30,15 +32,14 @@ export const TEST_CARDS = {
 export const generateChecksum = (payload: string, apiEndpoint: string) => {
   const string = apiEndpoint.includes('/status/') 
     ? `/pg/v1/status/${MERCHANT_ID}/${payload}${SALT_KEY}`
-    : `${payload}${apiEndpoint}${SALT_KEY}`;
+    : `${payload}/pg/v1/pay${SALT_KEY}`;
   const sha256 = createHash('sha256').update(string).digest('hex');
   return sha256 + '###' + SALT_INDEX;
 };
 
-// Helper function to generate unique transaction ID
+// Helper function to generate transaction ID
 export const generateTransactionId = () => {
-  const prefix = IS_PRODUCTION ? 'TXN' : 'TEST';
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  return `TXN_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
 };
 
 // Helper function to handle API errors
@@ -86,7 +87,8 @@ export const initiatePhonePePayment = async (amount: number, orderId: string, us
       apiUrl: API_URL,
       baseUrl: BASE_URL,
       amount: amount,
-      orderId: orderId
+      orderId: orderId,
+      payload: payload
     });
 
     const base64Payload = Buffer.from(JSON.stringify(payload)).toString('base64');
@@ -105,6 +107,8 @@ export const initiatePhonePePayment = async (amount: number, orderId: string, us
         }
       }
     );
+
+    console.log('PhonePe API Response:', response.data);
 
     const { success, code, data } = response.data;
 
@@ -161,8 +165,8 @@ export const checkPaymentStatus = async (transactionId: string, retryCount = 0):
     }
 
     if (success && code === 'PAYMENT_SUCCESS') {
-    return {
-      success: true,
+      return {
+        success: true,
         data: {
           merchantId: data.merchantId,
           merchantTransactionId: data.merchantTransactionId,

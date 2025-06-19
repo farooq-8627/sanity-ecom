@@ -81,7 +81,13 @@ export async function POST(req: Request) {
         })
         .commit();
 
-      throw new Error(paymentResponse.error || 'Payment initiation failed');
+      return new NextResponse(
+        JSON.stringify({ 
+          error: paymentResponse.error || "Payment initiation failed",
+          code: paymentResponse.code || 'UNKNOWN_ERROR'
+        }), 
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({
