@@ -15,6 +15,7 @@ import { userAddressType } from "./userAddressType";
 import { couponType } from "./couponType";
 import { userCartType } from "./userCartType";
 import { userWishlistType } from "./userWishlistType";
+import { colorGroupType } from "./colorGroup";
 
 export const schema: { types: SchemaTypeDefinition[] } = {
   types: [
@@ -34,5 +35,6 @@ export const schema: { types: SchemaTypeDefinition[] } = {
     userWishlistType,
     userCartType,
     couponType,
+    colorGroupType,
   ],
 };

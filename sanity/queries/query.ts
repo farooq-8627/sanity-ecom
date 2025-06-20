@@ -28,6 +28,17 @@ const PRODUCT_BY_SLUG_QUERY = defineQuery(
     "brand": brand->{
       title,
       description
+    },
+    "colorGroup": *[_type == "colorGroup" && references(^._id)][0] {
+      _id,
+      name,
+      "products": products[]-> {
+        _id,
+        name,
+        slug,
+        images,
+        stock
+      }
     }
   }`
 );

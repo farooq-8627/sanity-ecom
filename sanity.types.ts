@@ -316,7 +316,16 @@ export type Product = {
   };
   isFeatured?: boolean;
   hasSizes?: boolean;
-  sizes?: ProductSize[];
+  colorGroup?: {
+    _id: string;
+    name: string;
+    products: Product[];
+  };
+  sizes?: Array<{
+    _key: string;
+    size: string;
+    isEnabled: boolean;
+  }>;
 };
 
 export type Brand = {

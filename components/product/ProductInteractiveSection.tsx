@@ -11,18 +11,28 @@ import useStore from "@/store";
 import { useUser } from "@clerk/nextjs";
 import PriceFormatter from "@/components/PriceFormatter";
 import AddToCartButton from "@/components/AddToCartButton";
+import ColorOptions from "@/components/ColorOptions";
 import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
 
 interface ProductInteractiveSectionProps {
-  product: Product;
+  product: Product & {
+    colorGroup?: {
+      _id: string;
+      name: string;
+      products: Product[];
+    };
+  };
+  className?: string;
 }
 
-const ProductInteractiveSection = ({ product }: ProductInteractiveSectionProps) => {
+const ProductInteractiveSection = ({ product, className }: ProductInteractiveSectionProps) => {
   const { getItemCount } = useStore();
   const { isSignedIn } = useUser();
   const [selectedSize, setSelectedSize] = useState<string>("");
   const itemCount = getItemCount(product?._id, selectedSize);
   const productSlug = product?.slug?.current;
+  const sizes = product.hasSizes ? product.sizes : [];
 
   if (!productSlug || !product.name) {
     return null;
@@ -33,8 +43,9 @@ const ProductInteractiveSection = ({ product }: ProductInteractiveSectionProps) 
     ? product.sizes.filter((size) => size.isEnabled)
     : [];
 
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className={cn("flex flex-col gap-4", className)}>
       {/* Header Section */}
       <div className="flex flex-col gap-2">
         <div className="flex items-start justify-between">
@@ -96,24 +107,36 @@ const ProductInteractiveSection = ({ product }: ProductInteractiveSectionProps) 
         <p>{product?.description}</p>
       </div>
 
-      {/* Size Selection - Only show if product has sizes */}
-      {product.hasSizes && availableSizes.length > 0 && (
-        <div className="space-y-2">
-          <span className="text-sm font-medium text-gray-700">Select Size</span>
-          <div className="flex gap-2">
-            {availableSizes.map((sizeObj) => (
-              <button
-                key={sizeObj._key}
-                onClick={() => setSelectedSize(sizeObj.size)}
+      {/* Color Options */}
+      {product.colorGroup && (
+        <ColorOptions
+          product={product}
+          colorGroup={product.colorGroup}
+          className="pt-2"
+        />
+      )}
+
+      {/* Size Options */}
+      {product.hasSizes && (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            {sizes?.map(({ size, isEnabled }) => (
+              <Button
+                key={size}
+                onClick={() => setSelectedSize(size)}
+                disabled={!isEnabled}
+                variant="outline"
                 className={cn(
-                  "min-w-[48px] h-10 flex items-center justify-center rounded border text-sm font-medium",
-                  selectedSize === sizeObj.size
-                    ? "border-gray-900 bg-gray-900 text-white"
-                    : "border-gray-200 text-gray-900 hover:border-gray-900"
+                  "h-10 px-6",
+                  selectedSize === size
+                    ? "border-shop_dark_green bg-shop_dark_green text-white"
+                    : isEnabled
+                    ? "hover:border-shop_dark_green hover:text-shop_dark_green"
+                    : "opacity-50 cursor-not-allowed"
                 )}
               >
-                {sizeObj.size}
-              </button>
+                {size}
+              </Button>
             ))}
           </div>
         </div>
@@ -138,11 +161,10 @@ const ProductInteractiveSection = ({ product }: ProductInteractiveSectionProps) 
         )}
         
         {/* Add to Cart Button */}
-        <AddToCartButton 
-          product={product} 
-          className="w-full" 
+        <AddToCartButton
+          product={product}
           selectedSize={selectedSize}
-          disabled={product.hasSizes && !selectedSize}
+          className="w-full"
         />
       </div>
     </div>

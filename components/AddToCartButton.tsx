@@ -24,11 +24,6 @@ const AddToCartButton = ({ product, selectedSize, className, disabled }: Props) 
   const isOutOfStock = product?.stock === 0;
   const router = useRouter();
 
-  // Check if any size of this product is already in the cart
-  const isAnyVariantInCart = useStore((state) => 
-    state.items.some(item => item.product._id === product._id)
-  );
-
   const handleAddToCart = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!isLoaded || !isSignedIn) return;
     
@@ -42,22 +37,6 @@ const AddToCartButton = ({ product, selectedSize, className, disabled }: Props) 
   
   // Show view cart button if this specific item is in cart
   if (itemCount > 0 && isSignedIn) {
-    return (
-      <Button
-        onClick={() => router.push('/cart')}
-        className={cn(
-          "w-full bg-shop_light_green text-white hover:bg-shop_dark_green transition-colors",
-          className
-        )}
-      >
-        <ShoppingBag className="mr-2" /> View Cart
-      </Button>
-    );
-  }
-  
-  // Also show view cart button if any variant of this product is in cart
-  // and we're on a product page with sizes (not a listing page)
-  if (isAnyVariantInCart && product.hasSizes && isSignedIn) {
     return (
       <Button
         onClick={() => router.push('/cart')}

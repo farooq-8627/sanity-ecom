@@ -126,7 +126,6 @@ export const productType = defineType({
       type: "reference",
       to: { type: "brand" },
     }),
-
     defineField({
       name: "status",
       title: "Product Status",
